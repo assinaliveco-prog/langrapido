@@ -57,6 +57,32 @@ def _build_auto_prompt(
     max_questions = settings.get("max_questions", 1)
     target_chars = style.get("target_chars", 320)
 
+    formality_map = {
+        "baixa": "Tom informal e descontraído, como uma conversa entre amigos no WhatsApp.",
+        "media": "Tom natural e cordial, nem engessado nem cheio de gírias.",
+        "alta": "Tom profissional e respeitoso, sem gírias.",
+    }
+    concision_map = {
+        "curta": "Seja muito breve: 1 a 2 frases curtas por mensagem.",
+        "equilibrada": "Seja objetivo, sem encher linguiça.",
+        "detalhada": "Pode dar mais detalhes quando ajudar, sem ser prolixo.",
+    }
+    emoji_map = {
+        "nunca": "Não use emojis.",
+        "espelhar": "Use emojis apenas se o contato usar, com moderação.",
+        "leve": "Use emojis leves e ocasionais para soar natural.",
+    }
+    formality_line = formality_map.get(settings.get("formality", "media"), formality_map["media"])
+    concision_line = concision_map.get(settings.get("concision", "equilibrada"), concision_map["equilibrada"])
+    emoji_line = emoji_map.get(settings.get("emoji_mode", "espelhar"), emoji_map["espelhar"])
+    initiative = settings.get("commercial_initiative", 50)
+    if initiative >= 70:
+        initiative_line = "Seja proativo: conduza ativamente a conversa para o fechamento."
+    elif initiative <= 30:
+        initiative_line = "Seja consultivo: priorize entender a necessidade, sem pressionar a venda."
+    else:
+        initiative_line = "Equilibre escuta e condução comercial."
+
     return f"""
 Você é {settings.get('agent_name', 'Rafa')}, {settings.get('role', 'consultor comercial')}.
 Objetivo: {settings.get('objective', 'entender a necessidade e orientar o próximo passo')}.
@@ -71,6 +97,7 @@ Responda como uma pessoa atenta em uma conversa de WhatsApp:
 - JAMAIS repita uma frase, pergunta ou resposta que você já enviou antes nesta conversa; varie sempre as palavras;
 - se o contato repetir uma informação que já deu (ex.: dizer "pc" de novo), NÃO repita sua resposta anterior — reconheça brevemente e AVANCE para o próximo passo;
 - sempre conduza para um próximo passo concreto (pedir o dado que falta, enviar o link/valor, propor o fechamento); nunca encerre com a mesma pergunta genérica de fechamento mais de uma vez;
+- ao receber objeção (ex.: "tá caro", "vou pensar", "não sei"), NUNCA ignore nem apenas concorde: reconheça, reforce um benefício concreto ou ofereça alternativa (plano menor, vantagem), e faça uma pergunta que destrave a decisão;
 - não invente preço, prazo, disponibilidade, política ou dado do negócio;
 - não alegue ser humano e não minta sobre sua identidade se perguntarem;
 - não use introduções genéricas, encerramentos automáticos ou entusiasmo exagerado;
@@ -78,8 +105,12 @@ Responda como uma pessoa atenta em uma conversa de WhatsApp:
 - não use markdown de títulos ou listas longas;
 - devolva somente a mensagem destinada ao contato.
 
-Formalidade observada: {style.get('formality', 'medium')}.
-Espelhar emojis: {'sim, com moderação' if style.get('mirror_emojis') else 'não'}.
+Tom e estilo (definidos por você):
+- {formality_line}
+- {concision_line}
+- {emoji_line}
+- {initiative_line}
+Formalidade observada no contato: {style.get('formality', 'medium')} (ajuste o tom a ela quando fizer sentido).
 Termos preferidos: {preferred or ['nenhum']}.
 Termos proibidos: {forbidden}.
 

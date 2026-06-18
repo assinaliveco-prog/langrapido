@@ -89,6 +89,29 @@ avançar para o próximo passo concreto" no `_build_auto_prompt` e `_build_custo
 **Novo achado (objeção):** no cenário de objeção, "tá caro" foi ignorado — o bot
 não trata objeção de preço (não oferece desconto/valor/plano menor). → vira P4.
 
+### Iteração 3 — 2026-06-18 (objeção + personalidade funcional)
+
+Dois fixes em `src/bot/prompts.py`:
+- **P4** — regra de tratamento de objeção (reconhecer, reforçar valor/alternativa,
+  fazer pergunta que destrava).
+- **P6 (novo, grave)** — os controles do painel `formality`, `concision`,
+  `emoji_mode`, `commercial_initiative` eram **placebo**: salvos no DB mas nunca
+  usados no prompt (só o estilo inferido do lead afetava). Agora cada um vira
+  instrução explícita no `_build_auto_prompt`.
+
+**Resultados (runner local):**
+
+| Cenário | Saída | Veredito |
+|---------|-------|----------|
+| Objeção "tá caro" | "R$29 pode parecer alto, mas tem acesso a vasta biblioteca… que jogos você curte?" | ✅ trata objeção |
+| "vou pensar" | "Claro… tem algum jogo que gostaria de jogar?" | ✅ mantém porta aberta |
+| FORMAL (alta/sem emoji/curta) | "Sobre o que gostaria de conversar?" / "Legal, você joga no PC. Tem interesse?" | ✅ seco, sem emoji |
+| INFORMAL (baixa/emoji/curta) | "Vamos direto ao ponto! …😊" | ✅ contraste claro |
+| CUSTOM (gamer raiz) | "Mano, qual é a boa? …Quer fechar essa?" | ✅ tom custom |
+| Lead frio ("quem é vc?") | "Sou o Rafa… já tem plataforma em mente?" | ✅ honesto, avança |
+
+A troca de personalidade agora é **real e perceptível** (formal × informal × custom).
+
 ---
 
 ## 4. Problemas identificados (priorizados)
@@ -99,8 +122,9 @@ não trata objeção de preço (não oferece desconto/valor/plano menor). → vi
 | P1 | Alta | Respostas longas e formais demais para o estilo WhatsApp | prompt/splitter | 🟡 melhorou; reavaliar |
 | P2 | Média | Agente não progride a venda (repete fechamento em vez de avançar) | prompt/objetivo | ✅ corrigido (it.2) |
 | P3 | Baixa (dev) | Env local NVIDIA sobrepõe `.env` → bot quebra só em dev | `load_dotenv` | 📌 contornado no runner |
-| P4 | Média | Não trata objeção de preço ("tá caro" ignorado) | prompt | ⬜ aberto |
+| P4 | Média | Não trata objeção de preço ("tá caro" ignorado) | prompt | ✅ corrigido (it.3) |
 | P5 | Baixa | Critic é cego ao histórico (defesa 2ª contra repetição) | critic_node | ⬜ aberto |
+| P6 | Alta | Controles de personalidade do painel (formality/concision/emoji/iniciativa) eram placebo | prompt | ✅ corrigido (it.3) |
 
 ---
 
