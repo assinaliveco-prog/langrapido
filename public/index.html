@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LangaRápido Sim - Simulador de Agents Multimodais & CRM</title>
+  <!-- Google Fonts: Inter and Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-logo">
+        <span class="logo-icon">🤖</span>
+        <h1>LangaRápido<span>Sim</span></h1>
+      </div>
+      <div class="header-status" id="api-status">
+        <span class="status-indicator warning"></span>
+        <span class="status-text">Carregando Configurações...</span>
+      </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="app-workspace">
+      
+      <!-- LEFT PANEL: CONFIGURATION -->
+      <section class="workspace-panel config-panel">
+        <div class="panel-header">
+          <h2>Configuração do Robô</h2>
+        </div>
+        <div class="panel-content scrollable">
+          
+          <form id="bot-config-form">
+            <div class="form-group">
+              <label for="api-key">Chave de API Gemini (AI Studio)</label>
+              <div class="input-password-wrapper">
+                <input type="password" id="api-key" placeholder="Cole sua API Key aqui (ou configure no .env)" autocomplete="off">
+                <button type="button" id="toggle-api-key" class="icon-btn">👁️</button>
+              </div>
+              <small class="form-help">Sua chave é salva apenas localmente no seu arquivo db.json.</small>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="bot-name">Nome do Atendente</label>
+                <input type="text" id="bot-name" placeholder="Ex: Ana, Roberta, Carlos" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="model-name">Modelo</label>
+                <select id="model-name">
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                  <option value="gemini-3.5-pro">Gemini 3.5 Pro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Personalidade & Instruções do Atendente</label>
+              <div class="preset-buttons">
+                <button type="button" class="preset-btn active" data-preset="friendly">Amigável / Informal</button>
+                <button type="button" class="preset-btn" data-preset="formal">Direto / Formal</button>
+                <button type="button" class="preset-btn" data-preset="aggressive">Vendedor Focado</button>
+              </div>
+              <textarea id="personality" placeholder="Defina como o robô deve responder, suas regras e tom de voz..." rows="5" required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="typo-probability">Frequência de Erros de Digitação: <span id="typo-val">15%</span></label>
+              <input type="range" id="typo-probability" min="0" max="50" value="15">
+              <small class="form-help">Simula pequenos erros no teclado com correções imediatas no WhatsApp.</small>
+            </div>
+
+            <button type="submit" class="btn primary-btn w-full" id="save-config-btn">Salvar Configurações</button>
+          </form>
+
+          <hr class="panel-divider">
+
+          <div class="lead-selector-section">
+            <div class="panel-header-sub">
+              <h3>Selecione o Lead para Testar</h3>
+            </div>
+            
+            <div class="form-group">
+              <select id="lead-select">
+                <!-- Prepopulated leads from DB -->
+              </select>
+            </div>
+
+            <div class="lead-details-card" id="lead-details-card">
+              <h4>Objetivo Secreto do Lead</h4>
+              <p id="lead-details-text">Selecione um lead acima para ver seu background simulado.</p>
+            </div>
+
+            <button type="button" class="btn secondary-btn w-full" id="new-lead-btn">Criar Lead Personalizado</button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- CENTER PANEL: WHATSAPP CHAT SIMULATOR -->
+      <section class="workspace-panel chat-panel">
+        
+        <!-- WhatsApp Header -->
+        <div class="chat-header">
+          <div class="chat-avatar">👤</div>
+          <div class="chat-title-info">
+            <h3 id="chat-lead-name">Carregando Lead...</h3>
+            <span id="chat-lead-status" class="online">online</span>
+          </div>
+          <div class="chat-controls">
+            <button class="btn danger-btn text-xs" id="reset-chat-btn">Reiniciar Conversa</button>
+          </div>
+        </div>
+
+        <!-- Chat Conversation Area -->
+        <div class="chat-messages" id="chat-messages-container">
+          <!-- Chat messages dynamically rendered here -->
+        </div>
+
+        <!-- Auto Simulation Control Bar -->
+        <div class="simulation-bar">
+          <button class="btn secondary-btn" id="simulate-turn-btn" title="Executa o próximo turno da conversa automaticamente">
+            <span>⚡</span> Próximo Turno
+          </button>
+          <button class="btn success-btn" id="start-loop-btn" title="Coloca os agentes para conversarem sozinhos continuamente">
+            <span>▶️</span> Auto-Simular (Loop)
+          </button>
+          <button class="btn warning-btn hidden" id="stop-loop-btn">
+            <span>⏸️</span> Pausar Loop
+          </button>
+        </div>
+
+        <!-- Message Input Bar -->
+        <div class="chat-input-bar">
+          <input type="text" id="chat-input" placeholder="Digite uma mensagem como Lead e aperte Enter..." autocomplete="off">
+          <button id="send-msg-btn" class="icon-send-btn">➔</button>
+        </div>
+
+      </section>
+
+      <!-- RIGHT PANEL: LEAD PROFILER & CRM -->
+      <section class="workspace-panel crm-panel">
+        <div class="panel-header">
+          <h2>Ficha de Qualificação (CRM)</h2>
+        </div>
+        <div class="panel-content scrollable">
+          
+          <div class="crm-card">
+            <div class="crm-field">
+              <span class="field-label">Nome Identificado</span>
+              <span class="field-value highlight" id="crm-name">-</span>
+            </div>
+            <div class="crm-field">
+              <span class="field-label">Contato Capturado</span>
+              <span class="field-value highlight" id="crm-contact">-</span>
+            </div>
+          </div>
+
+          <div class="crm-card">
+            <div class="crm-field-inline">
+              <span class="field-label">Orçamento</span>
+              <span class="field-value" id="crm-budget">-</span>
+            </div>
+            <div class="crm-field-inline">
+              <span class="field-label">Nível de Interesse</span>
+              <span class="interest-badge status-neutral" id="crm-interest">INDEFINIDO</span>
+            </div>
+          </div>
+
+          <div class="crm-card">
+            <span class="field-label">Objeções Identificadas</span>
+            <div class="objection-tags" id="crm-objections-container">
+              <span class="no-data">Nenhuma objeção identificada</span>
+            </div>
+          </div>
+
+          <div class="crm-card">
+            <span class="field-label">Resumo Executivo (IA)</span>
+            <p class="summary-text" id="crm-summary">Aguardando início da conversa para analisar comportamento.</p>
+          </div>
+
+          <div class="crm-card action-card">
+            <span class="field-label highlight-green">Próximo Passo Recomendado</span>
+            <p class="action-text" id="crm-next-action">Aguardando mensagens...</p>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Create Custom Lead Modal -->
+    <div class="modal-overlay hidden" id="custom-lead-modal">
+      <div class="modal-card">
+        <h3>Criar Novo Lead para Simulação</h3>
+        <form id="custom-lead-form">
+          <div class="form-group">
+            <label for="new-lead-name">Nome do Lead</label>
+            <input type="text" id="new-lead-name" placeholder="Ex: Roberto Alves" required>
+          </div>
+          <div class="form-group">
+            <label for="new-lead-budget">Orçamento (Opcional)</label>
+            <input type="text" id="new-lead-budget" placeholder="Ex: R$ 5000/mês ou R$ 200k">
+          </div>
+          <div class="form-group">
+            <label for="new-lead-details">Background e Objetivos Secretos</label>
+            <textarea id="new-lead-details" placeholder="Ex: É dono de uma pizzaria. Quer um sistema de entregas. Está sem pressa e quer desconto. Só passa o telefone se confiar no vendedor..." rows="4" required></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn secondary-btn" id="close-modal-btn">Cancelar</button>
+            <button type="submit" class="btn primary-btn">Criar Lead</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+from __future__ import annotations
+
+import os
+import shutil
+import uuid
+import httpx
+
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
+
+from src.api.schemas import (
+    AgentSettings,
+    FlowCreate,
+    FlowResponse,
+    LabMessageRequest,
+    LabSessionRequest,
+)
+
+
+router = APIRouter(prefix="/api", tags=["admin"])
+
+
+@router.get("/dashboard")
+async def dashboard(request: Request):
+    services = request.app.state.services
+    stats = services.repository.dashboard_stats()
+    return {
+        **stats,
+        "model": services.repository.get_settings()["model"],
+        "ai_configured": bool(os.getenv("OPENAI_API_KEY")),
+        "whatsapp_configured": services.whatsapp.configured,
+    }
+
+
+@router.get("/settings", response_model=AgentSettings)
+async def get_settings(request: Request):
+    return request.app.state.services.repository.get_settings()
+
+
+@router.put("/settings", response_model=AgentSettings)
+async def put_settings(settings: AgentSettings, request: Request):
+    return request.app.state.services.repository.update_settings(
+        settings.model_dump()
+    )
+
+
+@router.get("/contacts")
+async def list_contacts(request: Request):
+    return request.app.state.services.repository.list_contacts()
+
+
+@router.get("/contacts/{contact_id}")
+async def get_contact(contact_id: int, request: Request):
+    repository = request.app.state.services.repository
+    contact = repository.get_contact(contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contato não encontrado")
+    return {
+        **contact,
+        "memories": repository.list_memories(contact_id),
+    }
+
+
+@router.get("/conversations/{conversation_id}/messages")
+async def get_messages(conversation_id: int, request: Request):
+    return request.app.state.services.repository.list_messages(conversation_id)
+
+
+@router.post(
+    "/lab/sessions",
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_lab_session(payload: LabSessionRequest, request: Request):
+    session = request.app.state.services.repository.create_lab_session(payload.name)
+    return {**session, "channel": "lab"}
+
+
+@router.post("/lab/sessions/{session_id}/messages")
+async def send_lab_message(
+    session_id: str,
+    payload: LabMessageRequest,
+    request: Request,
+):
+    services = request.app.state.services
+    try:
+        return await services.engine.handle_lab_message(session_id, payload.text)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "O provedor de IA não está disponível. "
+                "A mensagem foi preservada para nova tentativa."
+            ),
+        ) from error
+
+
+@router.delete(
+    "/lab/sessions/{session_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_lab_session(session_id: str, request: Request):
+    deleted = request.app.state.services.repository.delete_lab_session(session_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Sessão de laboratório não encontrada",
+        )
+
+
+@router.get("/events")
+async def list_events(request: Request, limit: int = 100):
+    safe_limit = max(1, min(limit, 500))
+    return request.app.state.services.repository.list_events(safe_limit)
+
+
+@router.get("/flows", response_model=list[FlowResponse])
+async def list_flows(request: Request):
+    return request.app.state.services.repository.list_flows()
+
+
+@router.get("/flows/{flow_id}", response_model=FlowResponse)
+async def get_flow(flow_id: int, request: Request):
+    flow = request.app.state.services.repository.get_flow(flow_id)
+    if flow is None:
+        raise HTTPException(status_code=404, detail="Fluxo não encontrado")
+    return flow
+
+
+@router.post(
+    "/flows",
+    response_model=FlowResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_flow(flow: FlowCreate, request: Request):
+    return request.app.state.services.repository.add_flow(
+        flow.name,
+        flow.trigger_intent,
+        [step.model_dump() for step in flow.steps],
+    )
+
+
+@router.put("/flows/{flow_id}", response_model=FlowResponse)
+async def update_flow(flow_id: int, flow: FlowCreate, request: Request):
+    updated = request.app.state.services.repository.update_flow(
+        flow_id,
+        flow.name,
+        flow.trigger_intent,
+        [step.model_dump() for step in flow.steps],
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Fluxo não encontrado")
+    return updated
+
+
+@router.delete("/flows/{flow_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_flow(flow_id: int, request: Request):
+    deleted = request.app.state.services.repository.delete_flow(flow_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Fluxo não encontrado")
+
+
+@router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    uploads_dir = os.path.join(os.path.dirname(__file__), "static", "uploads")
+    os.makedirs(uploads_dir, exist_ok=True)
+
+    file_ext = os.path.splitext(file.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = os.path.join(uploads_dir, unique_filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    url_path = f"/static/uploads/{unique_filename}"
+    return {"url": url_path, "filename": file.filename}
+
+
+@router.get("/instances/status")
+async def get_instance_status(request: Request):
+    services = request.app.state.services
+    cfg = services.whatsapp.get_config()
+
+    if cfg["provider"] == "official":
+        details = await services.whatsapp.get_phone_number_details()
+        if details:
+            return {
+                "provider": "official",
+                "status": "connected",
+                "display_name": details.get("verified_name", "WhatsApp Cloud API"),
+                "phone": details.get("display_phone_number", ""),
+                "id": details.get("id", ""),
+            }
+        else:
+            return {
+                "provider": "official",
+                "status": "disconnected" if services.whatsapp.configured else "unconfigured",
+            }
+    else:
+        if not services.whatsapp.configured:
+            return {
+                "provider": "evolution",
+                "status": "unconfigured",
+            }
+        # Evolution API connectionState
+        url = f"{cfg['evolution_url']}/instance/connectionState/{cfg['evolution_instance']}"
+        headers = {"apikey": cfg["evolution_key"]}
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                res = await client.get(url, headers=headers)
+            
+            # If instance doesn't exist on Evolution, try creating it
+            if res.status_code == 404 or (res.status_code == 200 and res.json().get("status") == 404) or (res.status_code == 200 and "not found" in res.json().get("message", "").lower()):
+                create_url = f"{cfg['evolution_url']}/instance/create"
+                create_payload = {
+                    "instanceName": cfg["evolution_instance"],
+                    "token": "",
+                    "qrcode": True
+                }
+                async with httpx.AsyncClient(timeout=10) as client:
+                    create_res = await client.post(create_url, headers=headers, json=create_payload)
+                if create_res.status_code == 201 or create_res.status_code == 200:
+                    qr_data = create_res.json()
+                    qrcode = qr_data.get("qrcode", {}).get("base64") or qr_data.get("base64")
+                    return {
+                        "provider": "evolution",
+                        "status": "disconnected",
+                        "qrcode": qrcode,
+                    }
+                else:
+                    return {
+                        "provider": "evolution",
+                        "status": "error",
+                        "detail": f"Erro ao criar instância no Evolution (Status: {create_res.status_code})",
+                    }
+
+            if res.status_code == 200:
+                data = res.json()
+                # If instance is open/connected
+                state = data.get("instance", {}).get("state")
+                if state == "open":
+                    return {
+                        "provider": "evolution",
+                        "status": "connected",
+                        "display_name": f"Evolution API ({cfg['evolution_instance']})",
+                        "phone": cfg["evolution_instance"],
+                        "id": cfg["evolution_instance"],
+                    }
+                else:
+                    # Disconnected - fetch QR code
+                    connect_url = f"{cfg['evolution_url']}/instance/connect/{cfg['evolution_instance']}"
+                    async with httpx.AsyncClient(timeout=10) as client:
+                        connect_res = await client.get(connect_url, headers=headers)
+                    qrcode = None
+                    if connect_res.status_code == 200:
+                        qr_data = connect_res.json()
+                        qrcode = qr_data.get("base64") or qr_data.get("code")
+                    return {
+                        "provider": "evolution",
+                        "status": "disconnected",
+                        "qrcode": qrcode,
+                    }
+            else:
+                return {
+                    "provider": "evolution",
+                    "status": "error",
+                    "detail": f"Evolution API retornou status {res.status_code}",
+                }
+        except Exception as e:
+            return {
+                "provider": "evolution",
+                "status": "error",
+                "detail": f"Erro de conexão com Evolution API: {str(e)}",
+            }
+
+
+@router.post("/instances/logout")
+async def logout_instance(request: Request):
+    services = request.app.state.services
+    cfg = services.whatsapp.get_config()
+    if cfg["provider"] == "official":
+        raise HTTPException(status_code=400, detail="Operação não disponível para canal Oficial")
+
+    url = f"{cfg['evolution_url']}/instance/logout/{cfg['evolution_instance']}"
+    headers = {"apikey": cfg["evolution_key"]}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            res = await client.post(url, headers=headers)
+        if res.status_code == 200:
+            return {"status": "ok", "message": "Instância deslogada com sucesso"}
+        else:
+            # Try delete
+            del_url = f"{cfg['evolution_url']}/instance/delete/{cfg['evolution_instance']}"
+            async with httpx.AsyncClient(timeout=10) as client:
+                del_res = await client.delete(del_url, headers=headers)
+            if del_res.status_code == 200:
+                return {"status": "ok", "message": "Instância excluída com sucesso"}
+            raise HTTPException(status_code=res.status_code, detail="Não foi possível deslogar a instância")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+

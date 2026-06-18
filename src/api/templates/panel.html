@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>LangRápido — Central de atendimento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3"/><path d="M8 15h8"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M7 14v6"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="m10 13 4-4M8 16H6a4 4 0 0 1 0-8h3M16 8h2a4 4 0 0 1 0 8h-3"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 9v5M12 17h.01"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 5v6h-6"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m3 4 18 8-18 8 3-8-3-8Z"/><path d="M6 12h15"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-flow" viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 0-2.24 1H9A3 3 0 0 1 6 14V8a3 3 0 0 1 3-3h3.27c.42 1.16 1.53 2 2.83 2a3 3 0 1 0-3-3H9a5 5 0 0 0-5 5v6a5 5 0 0 0 5 5h6.76a3 3 0 1 0 3.24-3Z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="1.7"/><path d="M12 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview" aria-label="LangRápido">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span class="brand-copy"><strong>LangRápido</strong><small>operations</small></span>
+      </a>
+
+      <nav class="primary-nav" aria-label="Navegação principal">
+        <button class="nav-item is-active" data-view-target="overview">
+          <svg><use href="#i-grid"></use></svg><span>Visão geral</span>
+        </button>
+        <button class="nav-item" data-view-target="conversations">
+          <svg><use href="#i-chat"></use></svg><span>Conversas</span>
+          <span class="nav-count" id="nav-conversation-count">0</span>
+        </button>
+        <button class="nav-item" data-view-target="lab">
+          <svg><use href="#i-flask"></use></svg><span>Laboratório</span>
+        </button>
+        <button class="nav-item" data-view-target="flows">
+          <svg><use href="#i-flow"></use></svg><span>Fluxos</span>
+        </button>
+        <span class="nav-label">Configuração</span>
+        <button class="nav-item" data-view-target="personality">
+          <svg><use href="#i-sliders"></use></svg><span>Personalidade</span>
+        </button>
+        <button class="nav-item" data-view-target="instances">
+          <svg><use href="#i-phone"></use></svg><span>Instâncias</span>
+        </button>
+        <button class="nav-item" data-view-target="integrations">
+          <svg><use href="#i-link"></use></svg><span>Integrações</span>
+        </button>
+        <button class="nav-item" data-view-target="events">
+          <svg><use href="#i-list"></use></svg><span>Registros</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="status-dot" id="sidebar-status-dot"></span>
+        <div><strong id="sidebar-status-title">Verificando sistema</strong><small id="sidebar-status-copy">Aguarde um instante</small></div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="view-eyebrow">CENTRAL OPERACIONAL</p>
+          <h1 id="view-title">Visão geral</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" id="refresh-view" title="Atualizar dados" aria-label="Atualizar dados">
+            <svg><use href="#i-refresh"></use></svg>
+          </button>
+          <button class="button button-primary" data-open-view="lab">
+            <svg><use href="#i-flask"></use></svg> Testar agente
+          </button>
+        </div>
+      </header>
+
+      <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+      <section class="view is-visible" data-view="overview">
+        <div class="hero-grid">
+          <article class="hero-card">
+            <span class="hero-kicker">STATUS DO ATENDIMENTO</span>
+            <h2>Clareza para operar.<br><em>Contexto para conversar.</em></h2>
+            <p>Acompanhe o agente, refine sua voz e valide conversas sem tocar no ambiente real.</p>
+            <div class="hero-actions">
+              <button class="button button-primary" data-open-view="conversations">Abrir conversas <svg><use href="#i-arrow"></use></svg></button>
+              <button class="button button-quiet" data-open-view="personality">Ajustar comportamento</button>
+            </div>
+          </article>
+          <article class="system-card">
+            <div class="system-card-header"><span>SAÚDE DO SISTEMA</span><span class="live-pill"><i></i> AO VIVO</span></div>
+            <div class="system-orbit">
+              <div class="orbit-core"><span id="health-score">—</span><small>serviços<br>prontos</small></div>
+            </div>
+            <div class="system-lines">
+              <div><span>Motor de IA</span><strong id="health-ai">verificando</strong></div>
+              <div><span>WhatsApp</span><strong id="health-whatsapp">verificando</strong></div>
+              <div><span>Persistência</span><strong id="health-database">verificando</strong></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card"><span>CONTATOS</span><strong id="metric-contacts">—</strong><small>perfis acompanhados</small></article>
+          <article class="metric-card"><span>CONVERSAS ABERTAS</span><strong id="metric-conversations">—</strong><small>incluindo laboratório</small></article>
+          <article class="metric-card"><span>MENSAGENS</span><strong id="metric-messages">—</strong><small>persistidas no banco</small></article>
+          <article class="metric-card metric-card-alert"><span>FALHAS REGISTRADAS</span><strong id="metric-failures">—</strong><small>exigem atenção operacional</small></article>
+        </div>
+
+        <div class="overview-bottom">
+          <article class="section-card">
+            <div class="section-heading"><div><span class="section-index">01</span><h3>Atividade recente</h3></div><button class="text-button" data-open-view="events">Ver registros</button></div>
+            <div class="activity-list" id="overview-activity"><div class="empty-state compact">Nenhuma atividade registrada.</div></div>
+          </article>
+          <article class="section-card readiness-card">
+            <div class="section-heading"><div><span class="section-index">02</span><h3>Pronto para atender?</h3></div></div>
+            <div class="readiness-list">
+              <button data-open-view="personality"><span class="readiness-icon"><svg><use href="#i-sliders"></use></svg></span><span><strong>Defina uma voz consistente</strong><small>Tom, concisão e limites comerciais</small></span><svg class="row-arrow"><use href="#i-arrow"></use></svg></button>
+              <button data-open-view="lab"><span class="readiness-icon"><svg><use href="#i-flask"></use></svg></span><span><strong>Faça um teste controlado</strong><small>Sem disparar mensagens reais</small></span><svg class="row-arrow"><use href="#i-arrow"></use></svg></button>
+              <button data-open-view="integrations"><span class="readiness-icon"><svg><use href="#i-link"></use></svg></span><span><strong>Confira as integrações</strong><small>Credenciais são apenas sinalizadas</small></span><svg class="row-arrow"><use href="#i-arrow"></use></svg></button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" data-view="conversations" hidden>
+        <div class="conversation-shell">
+          <aside class="contact-rail">
+            <div class="rail-header">
+              <div class="search-field"><svg><use href="#i-search"></use></svg><input id="contact-search" type="search" placeholder="Buscar contato"></div>
+            </div>
+            <div class="contact-list" id="contact-list"><div class="loading-state">Carregando contatos…</div></div>
+          </aside>
+          <article class="chat-stage">
+            <header class="chat-stage-header">
+              <div class="avatar" id="chat-avatar">—</div>
+              <div><strong id="chat-contact-name">Selecione uma conversa</strong><small id="chat-contact-phone">Histórico persistido</small></div>
+            </header>
+            <div class="message-stream" id="message-stream">
+              <div class="empty-state"><svg><use href="#i-chat"></use></svg><strong>Nenhuma conversa selecionada</strong><span>Escolha um contato para revisar o histórico.</span></div>
+            </div>
+            <div class="chat-readonly"><span>Visualização operacional</span><small>Use o Laboratório para enviar mensagens de teste.</small></div>
+          </article>
+          <aside class="context-panel">
+            <div class="context-header"><span>CONTEXTO</span><strong id="context-interest">INDEFINIDO</strong></div>
+            <div class="context-block"><span>Resumo</span><p id="context-summary">Selecione um contato para visualizar o contexto.</p></div>
+            <div class="context-block"><span>Próximo passo</span><p id="context-next-action">—</p></div>
+            <div class="context-block"><span>Memória confirmada</span><div class="memory-list" id="context-memories"><small>Nenhum fato confirmado.</small></div></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" data-view="lab" hidden>
+        <div class="lab-layout">
+          <article class="lab-chat-card">
+            <header class="panel-title-row">
+              <div><span class="section-index">LAB</span><h2>Conversa controlada</h2><p>O mesmo motor da produção, sem chamar a API do WhatsApp.</p></div>
+              <button class="button button-quiet button-small" id="reset-lab">Nova sessão</button>
+            </header>
+            <div class="lab-session-bar">
+              <label>Perfil de teste<input id="lab-profile-name" value="Lead de demonstração" maxlength="100"></label>
+              <span id="lab-session-status">Sessão ainda não iniciada</span>
+            </div>
+            <div class="message-stream lab-stream" id="lab-stream">
+              <div class="empty-state"><svg><use href="#i-flask"></use></svg><strong>Teste a naturalidade do agente</strong><span>Envie uma mensagem como se fosse um contato real.</span></div>
+            </div>
+            <form class="composer" id="lab-form">
+              <textarea id="lab-input" rows="1" placeholder="Ex.: achei interessante, mas está caro pra mim" maxlength="4000"></textarea>
+              <button class="send-button" type="submit" aria-label="Enviar mensagem"><svg><use href="#i-send"></use></svg></button>
+            </form>
+          </article>
+          <aside class="inspection-card">
+            <div class="inspection-tabs"><button class="is-active">Análise</button></div>
+            <div class="inspection-section"><span>RASCUNHO</span><p id="inspection-draft">O rascunho aparecerá após uma resposta.</p></div>
+            <div class="inspection-section"><span>AVALIAÇÃO</span><div id="inspection-evaluation" class="score-list"><small>Sem avaliação disponível.</small></div></div>
+            <div class="inspection-section"><span>ENTREGA</span><div id="inspection-delivery" class="delivery-list"><small>Nenhuma mensagem gerada.</small></div></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" data-view="personality" hidden>
+        <form class="settings-layout" id="settings-form">
+          <div class="settings-main">
+            <article class="form-section form-section-prompt">
+              <header><span class="section-index">00</span><div><h2>Prompt personalizado</h2><p>Cole aqui o seu prompt completo. Quando preenchido, ele <strong>substitui totalmente</strong> as configurações de identidade abaixo.</p></div></header>
+              <div class="prompt-override-banner" id="prompt-override-banner" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 9v5M12 17h.01"/></svg>
+                <span>Prompt personalizado ativo — as seções 01 a 03 estão sendo ignoradas.</span>
+              </div>
+              <label><span>Prompt completo do bot</span><textarea name="system_prompt" rows="14" placeholder="Cole aqui o seu prompt personalizado. Exemplo:&#10;&#10;Você é o cara do Game Pass. Vende acesso ao catálogo mais completo de jogos que existe...&#10;&#10;Deixe em branco para usar as configurações de identidade abaixo (seções 01–03)."></textarea></label>
+            </article>
+
+            <article class="form-section">
+              <header><span class="section-index">01</span><div><h2>Identidade operacional</h2><p>Defina quem atende e o resultado esperado da conversa.</p></div></header>
+              <div class="field-grid two">
+                <label><span>Nome do atendente</span><input name="agent_name" required maxlength="80"></label>
+                <label><span>Papel</span><input name="role" required maxlength="120"></label>
+              </div>
+              <label><span>Objetivo principal</span><textarea name="objective" rows="3" maxlength="500"></textarea></label>
+              <label><span>Descrição da voz</span><textarea name="voice" rows="3" maxlength="500"></textarea></label>
+            </article>
+
+            <article class="form-section">
+              <header><span class="section-index">02</span><div><h2>Ritmo e comportamento</h2><p>A naturalidade vem da adaptação, não de erros artificiais.</p></div></header>
+              <div class="field-grid three">
+                <label><span>Formalidade</span><select name="formality"><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option></select></label>
+                <label><span>Concisão</span><select name="concision"><option value="curta">Curta</option><option value="equilibrada">Equilibrada</option><option value="detalhada">Detalhada</option></select></label>
+                <label><span>Emojis</span><select name="emoji_mode"><option value="nunca">Nunca</option><option value="espelhar">Espelhar contato</option><option value="leve">Uso leve</option></select></label>
+              </div>
+              <div class="range-grid">
+                <label><span>Iniciativa comercial <output id="initiative-output">50</output></span><input type="range" name="commercial_initiative" min="0" max="100"></label>
+                <label><span>Máximo de perguntas</span><select name="max_questions"><option value="0">Nenhuma</option><option value="1">Uma</option><option value="2">Duas</option><option value="3">Três</option></select></label>
+              </div>
+              <div class="toggle-grid">
+                <label class="toggle-row"><span><strong>Dividir mensagens</strong><small>Quebra apenas em pausas semânticas naturais.</small></span><input type="checkbox" name="split_messages"><i></i></label>
+              </div>
+            </article>
+
+            <article class="form-section">
+              <header><span class="section-index">03</span><div><h2>Vocabulário e regras</h2><p>Defina limites claros para reduzir respostas genéricas.</p></div></header>
+              <div class="field-grid two">
+                <label><span>Termos preferidos</span><input name="preferred_terms" placeholder="claro, combinado, consigo"></label>
+                <label><span>Termos proibidos</span><input name="forbidden_terms" placeholder="como posso ajudar, será um prazer"></label>
+              </div>
+              <label><span>Regras específicas do negócio</span><textarea name="business_rules" rows="7" placeholder="Preços, limites, políticas e informações que o agente deve respeitar."></textarea></label>
+            </article>
+          </div>
+          <aside class="settings-aside">
+            <div class="sticky-card">
+              <span class="aside-label">MODELO ATIVO</span>
+              <label><select name="model"><option value="gpt-4o-mini">GPT-4o mini</option><option value="gpt-4o">GPT-4o</option><option value="gpt-4.1-mini">GPT-4.1 mini</option><option value="gpt-4.1">GPT-4.1</option></select></label>
+              <div class="aside-note"><svg><use href="#i-check"></use></svg><p><strong>Erros de digitação desativados</strong><span>Protege nomes, valores e contatos. O limite técnico permanece em 5%.</span></p></div>
+              <input type="hidden" name="typo_probability" value="0">
+              <button class="button button-primary button-block" type="submit">Salvar personalidade</button>
+              <p class="save-status" id="settings-save-status">Alterações ainda não salvas.</p>
+            </div>
+          </aside>
+        </form>
+      </section>
+
+      <section class="view" data-view="flows" hidden>
+        <div class="flows-layout">
+          <header class="panel-title-row">
+            <div>
+              <span class="section-index">FLUXOS</span>
+              <h2>Fluxos inteligentes</h2>
+              <p>Configure sequências de mensagens automáticas que a IA dispara por intenção do cliente.</p>
+            </div>
+            <button class="button button-primary" id="btn-new-flow">
+              Novo fluxo
+            </button>
+          </header>
+          <div class="flows-grid" id="flows-list">
+            <div class="loading-state">Carregando fluxos…</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="instances" hidden>
+        <div class="settings-layout">
+          <div class="settings-main">
+            <form id="instances-settings-form">
+              <article class="form-section">
+                <header><span class="section-index">01</span><div><h2>Configuração de Conexão</h2><p>Escolha como conectar o bot ao WhatsApp.</p></div></header>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                  <label style="display: block; margin-bottom: 8px;">PROVEDOR DE WHATSAPP</label>
+                  <div style="display: flex; gap: 20px; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
+                      <input type="radio" name="whatsapp_provider" value="official" style="width: auto; min-height: auto;" checked>
+                      <span>WhatsApp Oficial (Meta Cloud API)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
+                      <input type="radio" name="whatsapp_provider" value="evolution" style="width: auto; min-height: auto;">
+                      <span>Evolution API (Baileys Gateway)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div id="official-config-fields">
+                  <div class="aside-note" style="margin-bottom: 20px; border-color: var(--line);">
+                    <svg><use href="#i-check"></use></svg>
+                    <p><strong>Configuração Oficial Ativa</strong><span>A API oficial da Meta utiliza as variáveis definidas no arquivo <code>.env</code> do seu servidor (Token e Phone Number ID).</span></p>
+                  </div>
+                </div>
+
+                <div id="evolution-config-fields" style="display: none; flex-direction: column; gap: 14px;">
+                  <label><span>Evolution API URL (Base URL)</span><input type="url" name="evolution_url" placeholder="Ex: http://seu-servidor-evolution:8080"></label>
+                  <label><span>Global API Key (apikey)</span><input type="password" name="evolution_key" placeholder="Insira a chave global do Evolution"></label>
+                  <label><span>Nome da Instância</span><input type="text" name="evolution_instance" placeholder="Ex: langfast-instance"></label>
+                </div>
+
+                <button class="button button-primary" type="submit" style="margin-top: 25px; width: fit-content;">Salvar Conexão</button>
+              </article>
+            </form>
+          </div>
+
+          <aside class="settings-aside">
+            <div class="sticky-card" style="padding: 25px; background: var(--surface-1); border: 1px solid var(--line-soft); border-radius: var(--radius-md);">
+              <span class="aside-label">STATUS DA INSTÂNCIA</span>
+              <div id="instance-status-info" style="margin-top: 15px;">
+                <div class="loading-state">Consultando status da instância…</div>
+              </div>
+              <div id="instance-qrcode-container" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--line);">
+                <span style="font-size: 11px; font-family: var(--font-mono); color: var(--warning); text-align: center;">Escaneie o QR Code no seu WhatsApp:</span>
+                <div id="qrcode-img-box" style="padding: 10px; background: #fff; border-radius: 8px; display: inline-block;">
+                  <!-- QR Code image injected dynamically -->
+                </div>
+                <small style="color: var(--faint); font-size: 9px; text-align: center;">O QR Code é atualizado automaticamente.</small>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" data-view="integrations" hidden>
+        <div class="integration-grid">
+          <article class="integration-card"><div class="integration-brand ai">AI</div><div><span>PROVEDOR DE IA</span><h3>OpenAI</h3><p>Responsável por elaboração, crítica e extração de CRM das respostas.</p></div><strong class="integration-state" id="integration-ai">Verificando</strong></article>
+          <article class="integration-card"><div class="integration-brand wa">WA</div><div><span>CANAL DE ENTREGA</span><h3>WhatsApp Cloud API</h3><p>Leitura e envio pela integração oficial da Meta.</p></div><strong class="integration-state" id="integration-whatsapp">Verificando</strong></article>
+          <article class="integration-card"><div class="integration-brand db">DB</div><div><span>PERSISTÊNCIA</span><h3>SQLite</h3><p>Conversas, memória, configurações e eventos locais.</p></div><strong class="integration-state" id="integration-database">Verificando</strong></article>
+        </div>
+
+        <div class="connected-numbers-section" id="connected-numbers-card" style="margin-top: 25px; display: none;">
+          <article class="section-card" style="padding: 25px; background: var(--surface-1); border: 1px solid var(--line-soft); border-radius: var(--radius-md);">
+            <h3 style="margin: 0 0 15px; font-size: 11px; font-family: var(--font-mono); letter-spacing: .12em; color: var(--faint); text-transform: uppercase;">NÚMEROS CONECTADOS AO BOT</h3>
+            <div id="connected-numbers-list" style="display: grid; gap: 10px;">
+              <!-- Connected numbers details will be injected here -->
+            </div>
+          </article>
+        </div>
+
+        <article class="security-note"><svg><use href="#i-check"></use></svg><div><strong>Segredos não são enviados ao navegador</strong><p>Este painel exibe somente a presença operacional das credenciais. Edite as variáveis no arquivo <code>.env</code> do servidor.</p></div></article>
+      </section>
+
+      <section class="view" data-view="events" hidden>
+        <article class="section-card events-card">
+          <div class="section-heading">
+            <div><span class="section-index">LOG</span><h3>Eventos operacionais</h3></div>
+            <div class="filter-row"><button class="filter-chip is-active" data-event-filter="all">Todos</button><button class="filter-chip" data-event-filter="error">Falhas</button><button class="filter-chip" data-event-filter="warning">Alertas</button></div>
+          </div>
+          <div class="event-table" id="event-table"><div class="loading-state">Carregando registros…</div></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay hidden" id="flow-modal">
+    <div class="modal-card flow-modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="modal-eyebrow">CONSTRUTOR</span>
+          <h3>Novo fluxo inteligente</h3>
+        </div>
+        <button type="button" class="modal-close" id="btn-close-flow-modal">×</button>
+      </div>
+      
+      <form id="flow-form" autocomplete="off">
+        <input type="hidden" id="flow-id" value="">
+        
+        <div class="form-group">
+          <label for="flow-name">NOME DO FLUXO *</label>
+          <input type="text" id="flow-name" placeholder="Ex: Cardapio completo, Boas-vindas, Fechamento" required>
+          <small class="form-help">Use um nome curto para identificar rapidamente.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="flow-trigger">QUANDO A IA DEVE USAR? *</label>
+          <textarea id="flow-trigger" placeholder="Ex: quando pedirem cardapio, quando perguntarem preco, quando finalizar a venda..." rows="2" required></textarea>
+          <small class="form-help">Explique a intenção do cliente em linguagem natural.</small>
+        </div>
+
+        <div class="flow-steps-section">
+          <div class="steps-header">
+            <h4>Passos do fluxo</h4>
+            <button type="button" class="button button-quiet button-small" id="btn-add-step">
+              + Adicionar passo
+            </button>
+          </div>
+          <p class="steps-subtitle">Defina a ordem exata do que o bot vai enviar.</p>
+          
+          <div class="steps-list" id="steps-container">
+            <div class="empty-steps-state" id="empty-steps-message">
+              <span class="empty-icon">🥞</span>
+              <p>Nenhum passo adicionado ainda.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="button button-quiet" id="btn-cancel-flow">Cancelar</button>
+          <button type="submit" class="button button-primary" id="btn-save-flow">Salvar fluxo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/panel.js" defer></script>
+</body>
+</html>

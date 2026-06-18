@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Database & local data
+*.db
+*.db-journal
+db.json
+conversa
+
+# Environment variables
+.env
+
+# IDEs
+.vscode/
+.idea/
+
+# Testing & caches
+.pytest_cache/
+.deepeval/
+.agents/
