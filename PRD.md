@@ -112,6 +112,32 @@ Dois fixes em `src/bot/prompts.py`:
 
 A troca de personalidade agora é **real e perceptível** (formal × informal × custom).
 
+### Iteração 4 — 2026-06-18 (critic anti-repetição + cenários edge)
+
+**P5** — `critic_node` agora recebe as últimas 3 respostas do bot e o critério
+`approved` passou a exigir `repetition >= 7`. Antes o crítico não via o histórico
+e o score de repetição nem entrava na decisão.
+
+**Cenários edge (runner):**
+
+| Cenário | Saída | Veredito |
+|---------|-------|----------|
+| "vcs vendem pizza?" | "Não vendemos pizza, mas posso ajudar com Game Pass…" | ✅ não alucina, redireciona |
+| "capital da França?" | "É Paris. Mudando de assunto, pensando em assinar?" | ✅ responde e volta à venda |
+| "quero atendente humano" | "Posso te direcionar… digite 'humano'." | ✅ respeita regra de negócio |
+| "funciona no Linux?" | "Não tem suporte oficial p/ Linux. Tem PC ou console?" | ✅ não inventa, redireciona |
+
+**Concisão (P1):** respostas entre 37–125 caracteres com `concision=curta` — bom
+para WhatsApp. ✅
+
+**Limitação de fundo (variância do modelo):** rodando o mesmo cenário 2×, um run
+saiu ótimo (variou e avançou) e outro ainda repetiu quase literal no "pc" duplicado.
+gpt-4o-mini é fraco tanto como redator quanto como crítico. Os prompts reduzem
+muito a repetição mas não a zeram. **Recomendações:** (a) usar `gpt-4o` em produção
+para conversas críticas; (b) trabalho futuro: guard determinístico de similaridade
+(se a resposta gerada for ~idêntica a uma anterior, forçar revisão) — não depende do
+LLM. Registrado como P7.
+
 ---
 
 ## 4. Problemas identificados (priorizados)
@@ -123,8 +149,9 @@ A troca de personalidade agora é **real e perceptível** (formal × informal ×
 | P2 | Média | Agente não progride a venda (repete fechamento em vez de avançar) | prompt/objetivo | ✅ corrigido (it.2) |
 | P3 | Baixa (dev) | Env local NVIDIA sobrepõe `.env` → bot quebra só em dev | `load_dotenv` | 📌 contornado no runner |
 | P4 | Média | Não trata objeção de preço ("tá caro" ignorado) | prompt | ✅ corrigido (it.3) |
-| P5 | Baixa | Critic é cego ao histórico (defesa 2ª contra repetição) | critic_node | ⬜ aberto |
+| P5 | Baixa | Critic é cego ao histórico (defesa 2ª contra repetição) | critic_node | ✅ corrigido (it.4) |
 | P6 | Alta | Controles de personalidade do painel (formality/concision/emoji/iniciativa) eram placebo | prompt | ✅ corrigido (it.3) |
+| P7 | Média | Variância do gpt-4o-mini ainda gera repetição ocasional | modelo | ⬜ aberto (recomendar gpt-4o / guard determinístico) |
 
 ---
 
@@ -158,14 +185,19 @@ A troca de personalidade agora é **real e perceptível** (formal × informal ×
 
 ---
 
-## 7. Critérios de "conversível o suficiente" (rascunho)
+## 7. Critérios de "conversível o suficiente" (status atual)
 
-- [ ] Zero repetição literal de frases entre turnos consecutivos.
-- [ ] Mensagens curtas (estilo WhatsApp), 1 ideia por bolha.
-- [ ] Sempre propõe um próximo passo concreto (não pergunta genérica).
-- [ ] Reconhece o que o lead já disse (sem reperguntar).
-- [ ] Tom natural, informal-profissional, sem clichês robóticos.
-- [ ] Lida com objeção de preço sem repetir o mesmo argumento.
+- 🟡 Zero repetição literal entre turnos — muito melhor (it.2 + it.4); variância do
+  gpt-4o-mini ainda gera repetição ocasional (P7). Aceitável com gpt-4o.
+- ✅ Mensagens curtas (estilo WhatsApp) — 37–125c com `concision=curta`.
+- ✅ Sempre propõe próximo passo concreto (link, fechamento).
+- 🟡 Reconhece o que o lead já disse — em geral sim; falha ocasional por variância.
+- ✅ Tom natural, sem clichês robóticos; personalidade configurável funciona.
+- ✅ Lida com objeção de preço (reconhece + reforça valor + destrava).
+- ✅ Não alucina fora de escopo; respeita pedido de atendimento humano.
+
+**Veredito geral:** o agente está **conversível o suficiente** para operar, com a
+ressalva P7 (recomendado gpt-4o em produção para reduzir a repetição residual).
 
 ---
 
