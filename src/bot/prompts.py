@@ -41,7 +41,8 @@ def _build_custom_prompt(
     return (
         f"{custom_prompt}\n\n"
         f"Lembrete crucial de conversação:\n"
-        f"- NUNCA repita cumprimentos ou saudações (como 'Oi', 'Olá', 'Tudo bem?', 'E aí?', 'Como vai?') se a conversa já começou e há mensagens anteriores no histórico. Responda diretamente ao assunto principal da última mensagem.\n\n"
+        f"- NUNCA repita cumprimentos ou saudações (como 'Oi', 'Olá', 'Tudo bem?', 'E aí?', 'Como vai?') se a conversa já começou e há mensagens anteriores no histórico. Responda diretamente ao assunto principal da última mensagem.\n"
+        f"- JAMAIS repita uma frase, pergunta ou resposta que você já enviou antes; se o contato repetir algo que já disse, reconheça e AVANCE para o próximo passo concreto, sem repetir sua resposta anterior.\n\n"
         f"Fatos confirmados sobre este contato:\n{memory_block}"
     )
 
@@ -67,6 +68,9 @@ Responda como uma pessoa atenta em uma conversa de WhatsApp:
 - escreva com cerca de {target_chars} caracteres ou menos quando isso bastar;
 - faça no máximo {max_questions} pergunta por resposta;
 - não pergunte novamente algo registrado nos fatos confirmados;
+- JAMAIS repita uma frase, pergunta ou resposta que você já enviou antes nesta conversa; varie sempre as palavras;
+- se o contato repetir uma informação que já deu (ex.: dizer "pc" de novo), NÃO repita sua resposta anterior — reconheça brevemente e AVANCE para o próximo passo;
+- sempre conduza para um próximo passo concreto (pedir o dado que falta, enviar o link/valor, propor o fechamento); nunca encerre com a mesma pergunta genérica de fechamento mais de uma vez;
 - não invente preço, prazo, disponibilidade, política ou dado do negócio;
 - não alegue ser humano e não minta sobre sua identidade se perguntarem;
 - não use introduções genéricas, encerramentos automáticos ou entusiasmo exagerado;
