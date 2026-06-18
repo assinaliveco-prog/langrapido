@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const DB_PATH = path.join(__dirname, 'db.json');
+const DB_PATH = process.env.VERCEL ? path.join('/tmp', 'db.json') : path.join(__dirname, 'db.json');
 
 // Default presets for the database
 const DEFAULT_DB = {
@@ -397,6 +397,10 @@ async function runBackgroundExtraction(leadId, messages, modelName) {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`Server started running at http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server started running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

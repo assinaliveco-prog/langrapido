@@ -30,3 +30,4 @@ conversa
 .pytest_cache/
 .deepeval/
 .agents/
+.vercel

@@ -1,0 +1,10 @@
+{
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "rewrites": [
+    { "source": "/", "destination": "https://jota-langrapido.u0pugl.easypanel.host/painel" },
+    { "source": "/painel", "destination": "https://jota-langrapido.u0pugl.easypanel.host/painel" },
+    { "source": "/:path*", "destination": "https://jota-langrapido.u0pugl.easypanel.host/:path*" }
+  ]
+}
