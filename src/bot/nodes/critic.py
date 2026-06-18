@@ -1,9 +1,17 @@
+import difflib
+
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from src.bot.llm import make_llm
 from src.bot.prompts import build_critic_prompt
 from src.bot.state import AgentState
+
+
+def _too_similar(a: str, b: str, threshold: float = 0.82) -> bool:
+    if not a or not b:
+        return False
+    return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio() >= threshold
 
 
 class CriticEvaluation(BaseModel):
@@ -39,6 +47,20 @@ def critic_node(state: AgentState):
         ]
     )
     data = evaluation.model_dump()
+
+    # Deterministic repetition guard — does not depend on the LLM's judgement.
+    draft = state.get("current_draft", "")
+    duplicate = next((r for r in prior_replies if _too_similar(draft, r)), None)
+    if duplicate:
+        data["repetition"] = min(data.get("repetition", 0), 2)
+        data.setdefault("issues", []).append("resposta quase idêntica a uma anterior")
+        if not data.get("revision_instruction"):
+            data["revision_instruction"] = (
+                f"Sua resposta está quase idêntica a esta que você já enviou: "
+                f"\"{duplicate[:80]}\". Reformule completamente, com outra abordagem e "
+                f"outras palavras, e avance a conversa para um novo passo."
+            )
+
     data["approved"] = bool(
         data["approved"]
         and data["relevance"] >= 8

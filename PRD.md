@@ -151,7 +151,7 @@ LLM. Registrado como P7.
 | P4 | Média | Não trata objeção de preço ("tá caro" ignorado) | prompt | ✅ corrigido (it.3) |
 | P5 | Baixa | Critic é cego ao histórico (defesa 2ª contra repetição) | critic_node | ✅ corrigido (it.4) |
 | P6 | Alta | Controles de personalidade do painel (formality/concision/emoji/iniciativa) eram placebo | prompt | ✅ corrigido (it.3) |
-| P7 | Média | Variância do gpt-4o-mini ainda gera repetição ocasional | modelo | ⬜ aberto (recomendar gpt-4o / guard determinístico) |
+| P7 | Média | Variância do gpt-4o-mini ainda gera repetição ocasional | modelo/critic | 🟡 mitigado (it.5: guard difflib + recomendar gpt-4o) |
 
 ---
 
@@ -184,6 +184,26 @@ LLM. Registrado como P7.
 6. Bateria de cenários: objeção de preço, lead frio, lead apressado, lead curioso.
 
 ---
+
+### Iteração 5 — 2026-06-18 (guard determinístico + comparação de modelo)
+
+**P7 (guard)** — `critic_node` agora roda um check `difflib` (ratio ≥ 0.82) entre o
+draft e as últimas respostas do bot. Se for quase idêntico, força reprovação +
+instrução de reformulação — **sem depender do LLM julgar**. Reduz a repetição
+literal; em um run o mini passou a reconhecer explicitamente ("você já mencionou
+que é PC") e mandar o link.
+
+**Comparação gpt-4o-mini × gpt-4o (mesmo cenário "pc"/"pc"):**
+
+| Modelo | Comportamento no "pc" repetido | Consistência |
+|--------|-------------------------------|--------------|
+| gpt-4o-mini | às vezes repete a pergunta ou ignora o "pc" curto | variável |
+| gpt-4o | manda o link direto, sem repetir; conecta "pc" certo | estável (2/2 runs) |
+
+**Conclusão P7:** o guard + critic reduzem muito a repetição, mas a qualidade
+**consistente** vem do modelo. **Recomendação: usar `gpt-4o` em produção** (o painel
+já permite trocar em Personalidade → Modelo). gpt-4o-mini serve para custo baixo /
+testes.
 
 ## 7. Critérios de "conversível o suficiente" (status atual)
 
