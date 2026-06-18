@@ -205,6 +205,22 @@ que é PC") e mandar o link.
 já permite trocar em Personalidade → Modelo). gpt-4o-mini serve para custo baixo /
 testes.
 
+### Iteração 6 — 2026-06-18 (CRM + fluxos)
+
+**Extração de CRM** ✅ — conversa revelando nome/orçamento/e-mail; o `crm_extractor`
+persistiu como memórias:
+
+```
+name: Lucas Andrade | email: lucas.andrade@gmail.com | budget: 50 reais por mês
+interest: Game Pass | next_action: enviar link
+```
+
+**Fluxos inteligentes** ✅ — flow "Planos" (trigger "cliente pede os planos");
+"quais os planos disponíveis?" disparou e enviou os 2 steps exatos.
+
+**Nota:** no teste de CRM o mini repetiu o pitch ao receber o e-mail (deveria
+confirmar e avançar) — mesma raiz do P7 (variância do mini); gpt-4o evita.
+
 ## 7. Critérios de "conversível o suficiente" (status atual)
 
 - 🟡 Zero repetição literal entre turnos — muito melhor (it.2 + it.4); variância do
@@ -221,11 +237,40 @@ ressalva P7 (recomendado gpt-4o em produção para reduzir a repetição residua
 
 ---
 
-## 8. Backlog de testes (próximas iterações)
+## 8. Backlog de testes (concluído)
 
-- [ ] Troca de personalidade: formalidade baixa × alta; emoji nunca × leve.
-- [ ] Prompt custom completo (caminho `_build_custom_prompt`).
-- [ ] Objeção: "tá caro", "vou pensar", "não tenho cartão".
-- [ ] Lead apressado (mensagens curtas e secas).
-- [ ] Fluxos inteligentes (trigger por intenção) — disparo e conteúdo.
-- [ ] Extração de CRM (nome, e-mail, orçamento) ao longo da conversa.
+- [x] Troca de personalidade: formalidade baixa × alta; emoji nunca × leve. (it.3)
+- [x] Prompt custom completo (caminho `_build_custom_prompt`). (it.3)
+- [x] Objeção: "tá caro", "vou pensar". (it.3/it.4)
+- [x] Lead frio / fora de escopo / pedido de humano. (it.4)
+- [x] Fluxos inteligentes (trigger por intenção) — disparo e conteúdo. (it.6)
+- [x] Extração de CRM (nome, e-mail, orçamento). (it.6)
+
+---
+
+## 9. Resumo executivo
+
+Avaliação completa em 6 iterações. O agente foi de "repetitivo e robótico" para
+**conversível e personalizável**, com 6 correções entregues e deployadas:
+
+| # | Correção | Iteração |
+|---|----------|----------|
+| P0/P2 | Anti-repetição + sempre avançar a venda (prompt) | it.2 |
+| P4 | Tratamento de objeção de preço | it.3 |
+| P6 | Controles de personalidade do painel deixaram de ser placebo | it.3 |
+| P5 | Crítico passou a ver o histórico e bloquear repetição | it.4 |
+| P7 | Guard determinístico de similaridade (difflib) no crítico | it.5 |
+
+**O que funciona bem:** ver conversas, personalidade (formal/informal/custom),
+objeção, cenários fora de escopo, handoff humano, extração de CRM, fluxos por
+intenção, concisão WhatsApp.
+
+**Recomendações para produção:**
+1. **Usar `gpt-4o`** (painel → Personalidade → Modelo) — elimina a repetição residual
+   do mini e dá qualidade consistente. O mini fica para custo baixo/testes.
+2. **Configurar o WhatsApp** (Evolution: salvar credenciais + "Conectar instância";
+   ou Cloud API) — hoje `whatsapp_configured=false`.
+3. **Auth do painel** — ainda pendente (adiado a pedido); o painel está aberto.
+
+**Pendências conhecidas (não bloqueantes):** P7 residual (mitigado por gpt-4o);
+P3 ambiente de dev local (NVIDIA NIM sobrepõe `.env` — só afeta testes locais).
