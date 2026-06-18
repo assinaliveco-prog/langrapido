@@ -20,8 +20,16 @@ from src.services.whatsapp import WhatsAppClient, get_whatsapp_client
 
 load_dotenv()
 
+# Fallback environment variables for VPS deployment (from Easypanel LLM keys)
+if not os.getenv("OPENAI_API_KEY") and os.getenv("LLM_API_KEY"):
+    os.environ["OPENAI_API_KEY"] = os.environ.get("LLM_API_KEY", "")
+if not os.getenv("OPENAI_API_BASE") and os.getenv("LLM_API_BASE"):
+    os.environ["OPENAI_API_BASE"] = os.environ.get("LLM_API_BASE", "")
+    os.environ["OPENAI_BASE_URL"] = os.environ.get("LLM_API_BASE", "")
+
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
+
 
 
 @dataclass
