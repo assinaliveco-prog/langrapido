@@ -8,10 +8,10 @@ from __future__ import annotations
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from src.api.repository import get_repository
+from src.bot.llm import make_llm
 from src.bot.state import AgentState
 
 
@@ -53,10 +53,7 @@ def crm_extractor_node(state: AgentState) -> dict[str, Any]:
         for m in excerpt_messages
     )
 
-    llm = ChatOpenAI(
-        model=settings.get("model", "gpt-4o-mini"),
-        temperature=0,
-    ).with_structured_output(CRMFields)
+    llm = make_llm(settings, temperature=0).with_structured_output(CRMFields)
 
     try:
         result: CRMFields = llm.invoke(

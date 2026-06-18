@@ -57,7 +57,9 @@ def create_app() -> FastAPI:
 
     @application.get("/api/health", response_model=HealthResponse)
     async def health():
-        ai_configured = bool(os.getenv("OPENAI_API_KEY"))
+        from src.bot.llm import resolve_openai_key
+
+        ai_configured = bool(resolve_openai_key(repository.get_settings()))
         whatsapp = application.state.services.whatsapp
         whatsapp_configured = whatsapp.configured
         whatsapp_details = None

@@ -1,9 +1,9 @@
 import json
 import logging
-import os
 from typing import Any
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+
+from src.bot.llm import make_llm, resolve_openai_key
 
 logger = logging.getLogger("flow_service")
 
@@ -41,9 +41,8 @@ Regras:
 """
 
     try:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            logger.warning("OPENAI_API_KEY not found in environment. Skipping flow matching.")
+        if not resolve_openai_key(settings):
+            logger.warning("OpenAI key not configured. Skipping flow matching.")
             return None
 
         # Build the messages
@@ -52,8 +51,8 @@ Regras:
             HumanMessage(content=f"Mensagem do Usuário: '{text}'"),
         ]
 
-        llm = ChatOpenAI(
-            model=settings.get("model", "gpt-4o-mini"),
+        llm = make_llm(
+            settings,
             temperature=0.0,  # 0.0 for deterministic classification
             max_tokens=10,
         )

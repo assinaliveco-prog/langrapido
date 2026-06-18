@@ -21,12 +21,15 @@ router = APIRouter(prefix="/api", tags=["admin"])
 
 @router.get("/dashboard")
 async def dashboard(request: Request):
+    from src.bot.llm import resolve_openai_key
+
     services = request.app.state.services
     stats = services.repository.dashboard_stats()
+    settings = services.repository.get_settings()
     return {
         **stats,
-        "model": services.repository.get_settings()["model"],
-        "ai_configured": bool(os.getenv("OPENAI_API_KEY")),
+        "model": settings["model"],
+        "ai_configured": bool(resolve_openai_key(settings)),
         "whatsapp_configured": services.whatsapp.configured,
     }
 
@@ -272,6 +275,70 @@ async def get_instance_status(request: Request):
                 "status": "error",
                 "detail": f"Erro de conexão com Evolution API: {str(e)}",
             }
+
+
+@router.post("/instances/connect")
+async def connect_instance(request: Request):
+    """Force an Evolution instance to (re)connect and return a fresh QR code."""
+    services = request.app.state.services
+    cfg = services.whatsapp.get_config()
+    if cfg["provider"] == "official":
+        raise HTTPException(
+            status_code=400,
+            detail="Conexão por QR Code disponível apenas para Evolution API",
+        )
+    if not services.whatsapp.configured:
+        raise HTTPException(
+            status_code=400,
+            detail="Configure a URL, a chave e o nome da instância antes de conectar",
+        )
+
+    base = cfg["evolution_url"].rstrip("/")
+    instance = cfg["evolution_instance"]
+    headers = {"apikey": cfg["evolution_key"]}
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            res = await client.get(
+                f"{base}/instance/connect/{instance}", headers=headers
+            )
+            # Instance not created yet → create it (qrcode=True returns the QR)
+            if res.status_code == 404:
+                create_res = await client.post(
+                    f"{base}/instance/create",
+                    headers=headers,
+                    json={"instanceName": instance, "token": "", "qrcode": True},
+                )
+                if create_res.status_code not in (200, 201):
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"Erro ao criar instância (status {create_res.status_code})",
+                    )
+                data = create_res.json()
+                qrcode = data.get("qrcode", {}).get("base64") or data.get("base64")
+                return {"status": "disconnected", "qrcode": qrcode}
+
+        if res.status_code != 200:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Evolution API retornou status {res.status_code}",
+            )
+        data = res.json()
+        # Already connected
+        if data.get("instance", {}).get("state") == "open":
+            return {"status": "connected"}
+        qrcode = (
+            data.get("base64")
+            or data.get("code")
+            or data.get("qrcode", {}).get("base64")
+        )
+        return {"status": "disconnected", "qrcode": qrcode}
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro de conexão com Evolution API: {error}",
+        ) from error
 
 
 @router.post("/instances/logout")

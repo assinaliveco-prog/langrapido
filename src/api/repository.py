@@ -58,6 +58,7 @@ class Repository:
             evolution_url TEXT NOT NULL DEFAULT '',
             evolution_key TEXT NOT NULL DEFAULT '',
             evolution_instance TEXT NOT NULL DEFAULT '',
+            openai_api_key TEXT NOT NULL DEFAULT '',
             model TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -162,6 +163,7 @@ class Repository:
                 "ALTER TABLE settings ADD COLUMN evolution_url TEXT NOT NULL DEFAULT ''",
                 "ALTER TABLE settings ADD COLUMN evolution_key TEXT NOT NULL DEFAULT ''",
                 "ALTER TABLE settings ADD COLUMN evolution_instance TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE settings ADD COLUMN openai_api_key TEXT NOT NULL DEFAULT ''",
             ]
             for statement in migrations:
                 try:
@@ -176,8 +178,8 @@ class Repository:
                     split_messages, typo_probability, preferred_terms,
                     forbidden_terms, business_rules, system_prompt,
                     whatsapp_provider, evolution_url, evolution_key, evolution_instance,
-                    model, updated_at
-                ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    openai_api_key, model, updated_at
+                ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     defaults["agent_name"],
@@ -199,6 +201,7 @@ class Repository:
                     defaults["evolution_url"],
                     defaults["evolution_key"],
                     defaults["evolution_instance"],
+                    defaults["openai_api_key"],
                     os.getenv("OPENAI_MODEL", defaults["model"]),
                     utc_now(),
                 ),
@@ -244,6 +247,7 @@ class Repository:
                     business_rules = ?, system_prompt = ?,
                     whatsapp_provider = ?, evolution_url = ?,
                     evolution_key = ?, evolution_instance = ?,
+                    openai_api_key = ?,
                     model = ?, updated_at = ?
                 WHERE id = 1
                 """,
@@ -267,6 +271,7 @@ class Repository:
                     validated["evolution_url"],
                     validated["evolution_key"],
                     validated["evolution_instance"],
+                    validated["openai_api_key"],
                     validated["model"],
                     utc_now(),
                 ),
@@ -301,7 +306,17 @@ class Repository:
     def list_contacts(self, limit: int = 100) -> list[dict[str, Any]]:
         with self.connect() as connection:
             rows = connection.execute(
-                "SELECT * FROM contacts ORDER BY updated_at DESC LIMIT ?", (limit,)
+                """
+                SELECT contacts.*, (
+                    SELECT conversations.id FROM conversations
+                    WHERE conversations.contact_id = contacts.id
+                    ORDER BY conversations.updated_at DESC, conversations.id DESC
+                    LIMIT 1
+                ) AS conversation_id
+                FROM contacts
+                ORDER BY contacts.updated_at DESC LIMIT ?
+                """,
+                (limit,),
             ).fetchall()
         return [dict(row) for row in rows]
 

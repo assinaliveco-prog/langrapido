@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 
 from src.api.repository import get_repository
+from src.bot.llm import make_llm
 from src.bot.prompts import build_drafter_prompt
 from src.bot.state import AgentState
 
@@ -26,10 +26,7 @@ def drafter_node(state: AgentState):
             )
         )
 
-    llm = ChatOpenAI(
-        model=settings.get("model", "gpt-4o-mini"),
-        temperature=0.65,
-    )
+    llm = make_llm(settings, temperature=0.65)
     response = llm.invoke(messages)
     draft = response.content.strip()
     return {

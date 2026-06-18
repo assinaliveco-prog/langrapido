@@ -94,7 +94,7 @@ async function refreshCurrentView() {
     flows: loadFlows,
     personality: loadSettings,
     instances: loadInstances,
-    integrations: loadHealth,
+    integrations: loadIntegrations,
     events: loadEvents,
   };
   if (loaders[state.view]) {
@@ -177,6 +177,60 @@ function applyHealth(health) {
 async function loadHealth() {
   const health = await api.request("/api/health");
   applyHealth(health);
+}
+
+async function loadIntegrations() {
+  await loadHealth();
+  try {
+    const settings = await api.request("/api/settings");
+    state.settings = settings;
+    const field = $("#openai-key-form")?.elements?.openai_api_key;
+    if (field) field.value = settings.openai_api_key || "";
+    setText(
+      "#openai-key-status",
+      settings.openai_api_key
+        ? "Chave configurada no servidor."
+        : "Nenhuma chave salva — usando variável de ambiente, se houver.",
+    );
+  } catch (error) {
+    // health already rendered; surface key load issues quietly
+    setText("#openai-key-status", "Não foi possível carregar a chave atual.");
+  }
+}
+
+async function saveOpenAiKey(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector('[type="submit"]');
+  button.disabled = true;
+  setText("#openai-key-status", "Salvando chave…");
+  const openai_api_key = form.elements.openai_api_key.value.trim();
+  if (!state.settings) {
+    try {
+      state.settings = await api.request("/api/settings");
+    } catch (err) {
+      state.settings = {};
+    }
+  }
+  const payload = { ...state.settings, openai_api_key };
+  try {
+    const saved = await api.request("/api/settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    state.settings = saved;
+    toast("Chave da OpenAI salva. Vale para a próxima mensagem.");
+    await loadHealth();
+    setText(
+      "#openai-key-status",
+      saved.openai_api_key ? "Chave configurada no servidor." : "Chave removida.",
+    );
+  } catch (error) {
+    setText("#openai-key-status", error.message);
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function renderActivity(events) {
@@ -1016,7 +1070,14 @@ async function refreshInstanceStatus() {
   
   try {
     const statusData = await api.request("/api/instances/status");
-    
+
+    const connectBtn = $("#btn-connect-instance");
+    if (connectBtn) {
+      const showConnect =
+        statusData.provider === "evolution" && statusData.status !== "connected";
+      connectBtn.style.display = showConnect ? "block" : "none";
+    }
+
     if (statusData.status === "connected") {
       qrcodeContainer.style.display = "none";
       statusInfo.innerHTML = `
@@ -1088,6 +1149,32 @@ async function refreshInstanceStatus() {
   } catch (error) {
     statusInfo.innerHTML = `<p style="color: var(--danger); font-size: 11px;">Erro ao carregar status: ${error.message}</p>`;
     qrcodeContainer.style.display = "none";
+  }
+}
+
+async function connectInstance() {
+  const button = $("#btn-connect-instance");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Gerando QR Code…";
+  }
+  try {
+    const result = await api.request("/api/instances/connect", { method: "POST" });
+    if (result.status === "connected") {
+      toast("Instância já está conectada.");
+    } else if (result.qrcode) {
+      toast("QR Code gerado. Escaneie no WhatsApp.");
+    } else {
+      toast("Aguardando QR Code do Evolution…");
+    }
+    await refreshInstanceStatus();
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Conectar instância";
+    }
   }
 }
 
@@ -1163,6 +1250,12 @@ function bindEvents() {
       radio.addEventListener("change", (e) => toggleProviderFields(e.target.value));
     });
   }
+
+  const connectBtn = $("#btn-connect-instance");
+  if (connectBtn) connectBtn.addEventListener("click", connectInstance);
+
+  const openaiKeyForm = $("#openai-key-form");
+  if (openaiKeyForm) openaiKeyForm.addEventListener("submit", saveOpenAiKey);
 
   $$(".nav-item").forEach((button) => button.addEventListener("click", () => openView(button.dataset.viewTarget)));
   $$("[data-open-view]").forEach((button) => button.addEventListener("click", () => openView(button.dataset.openView)));

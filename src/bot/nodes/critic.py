@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
+from src.bot.llm import make_llm
 from src.bot.prompts import build_critic_prompt
 from src.bot.state import AgentState
 
@@ -19,10 +19,7 @@ class CriticEvaluation(BaseModel):
 
 def critic_node(state: AgentState):
     settings = state.get("settings", {})
-    llm = ChatOpenAI(
-        model=settings.get("model", "gpt-4o-mini"),
-        temperature=0,
-    ).with_structured_output(CriticEvaluation)
+    llm = make_llm(settings, temperature=0).with_structured_output(CriticEvaluation)
     history = state.get("messages", [])
     last_user_message = history[-1].content if history else ""
     evaluation = llm.invoke(

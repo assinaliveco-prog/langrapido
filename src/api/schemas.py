@@ -23,6 +23,7 @@ class AgentSettings(BaseModel):
     evolution_url: str = ""
     evolution_key: str = ""
     evolution_instance: str = ""
+    openai_api_key: str = ""
     model: str = "gpt-4o-mini"
 
 

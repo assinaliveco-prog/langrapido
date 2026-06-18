@@ -314,6 +314,9 @@
               <div id="instance-status-info" style="margin-top: 15px;">
                 <div class="loading-state">Consultando status da instância…</div>
               </div>
+              <button id="btn-connect-instance" type="button" class="button button-primary button-block" style="margin-top: 16px; display: none;">
+                Conectar instância
+              </button>
               <div id="instance-qrcode-container" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--line);">
                 <span style="font-size: 11px; font-family: var(--font-mono); color: var(--warning); text-align: center;">Escaneie o QR Code no seu WhatsApp:</span>
                 <div id="qrcode-img-box" style="padding: 10px; background: #fff; border-radius: 8px; display: inline-block;">
@@ -342,7 +345,15 @@
           </article>
         </div>
 
-        <article class="security-note"><svg><use href="#i-check"></use></svg><div><strong>Segredos não são enviados ao navegador</strong><p>Este painel exibe somente a presença operacional das credenciais. Edite as variáveis no arquivo <code>.env</code> do servidor.</p></div></article>
+        <form id="openai-key-form" class="section-card" style="margin-top: 25px; padding: 25px; background: var(--surface-1); border: 1px solid var(--line-soft); border-radius: var(--radius-md);">
+          <h3 style="margin: 0 0 6px; font-size: 11px; font-family: var(--font-mono); letter-spacing: .12em; color: var(--faint); text-transform: uppercase;">Chave da API OpenAI (GPT)</h3>
+          <p style="margin: 0 0 16px; font-size: 12px; color: var(--muted);">Cole sua chave da OpenAI para habilitar elaboração, crítica e extração de CRM. Fica salva no servidor e tem prioridade sobre a variável de ambiente.</p>
+          <label style="display: block; margin-bottom: 14px;"><span style="display:block; font-size: 12px; color: var(--muted); margin-bottom: 6px;">OPENAI_API_KEY</span><input type="password" name="openai_api_key" placeholder="sk-..." autocomplete="off" style="width: 100%;"></label>
+          <button class="button button-primary" type="submit" style="width: fit-content;">Salvar chave</button>
+          <p class="save-status" id="openai-key-status" style="margin-top: 12px; font-size: 11px; color: var(--faint);">Status sincronizado com o servidor.</p>
+        </form>
+
+        <article class="security-note"><svg><use href="#i-check"></use></svg><div><strong>As chaves ficam no servidor</strong><p>Credenciais são armazenadas no banco do servidor e usadas apenas para operar o agente. Use uma chave dedicada e revogue-a se necessário.</p></div></article>
       </section>
 
       <section class="view" data-view="events" hidden>
