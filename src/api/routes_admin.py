@@ -198,6 +198,40 @@ async def upload_file(file: UploadFile = File(...)):
     return {"url": url_path, "filename": file.filename}
 
 
+@router.get("/instances/debug")
+async def debug_instance(request: Request):
+    """Raw Evolution diagnostics — connection state + instance details."""
+    services = request.app.state.services
+    cfg = services.whatsapp.get_config()
+    if cfg["provider"] != "evolution":
+        return {"error": "provider is not evolution", "provider": cfg["provider"]}
+    base = cfg["evolution_url"].rstrip("/")
+    inst = cfg["evolution_instance"]
+    headers = {"apikey": cfg["evolution_key"]}
+    out = {"url": base, "instance": inst}
+    async with httpx.AsyncClient(timeout=15) as c:
+        try:
+            r = await c.get(f"{base}/instance/connectionState/{inst}", headers=headers)
+            out["connectionState"] = {"http": r.status_code, "body": r.text[:300]}
+        except Exception as e:
+            out["connectionState"] = {"error": str(e)[:150]}
+        try:
+            r2 = await c.get(f"{base}/instance/fetchInstances", headers=headers)
+            data = r2.json()
+            insts = data if isinstance(data, list) else data.get("instances", data)
+            # keep only our instance, drop noise
+            summary = []
+            for it in (insts if isinstance(insts, list) else [insts]):
+                node = it.get("instance", it) if isinstance(it, dict) else {}
+                nm = node.get("instanceName") or node.get("name")
+                if nm == inst or not nm:
+                    summary.append({k: node.get(k) for k in ("instanceName", "name", "status", "connectionStatus", "state") if k in node})
+            out["fetchInstances"] = {"http": r2.status_code, "match": summary}
+        except Exception as e:
+            out["fetchInstances"] = {"error": str(e)[:150]}
+    return out
+
+
 @router.get("/instances/status")
 async def get_instance_status(request: Request):
     services = request.app.state.services
