@@ -1171,7 +1171,9 @@ async function refreshInstanceStatus() {
           const src = statusData.qrcode.startsWith('data:') ? statusData.qrcode : `data:image/png;base64,${statusData.qrcode}`;
           qrBox.innerHTML = `<img src="${src}" alt="QR Code" style="display: block; width: 180px; height: 180px; margin: 0 auto;">`;
         }
-      } else {
+      } else if (!statusData.connecting) {
+        // No QR and not mid-pairing → hide. While connecting, keep the QR shown
+        // (we intentionally don't re-fetch it to avoid restarting the socket).
         qrcodeContainer.style.display = "none";
       }
     } else if (statusData.status === "unconfigured") {
@@ -1213,12 +1215,22 @@ async function connectInstance() {
     const result = await api.request("/api/instances/connect", { method: "POST" });
     if (result.status === "connected") {
       toast("Instância já está conectada.");
+      await refreshInstanceStatus();
     } else if (result.qrcode) {
-      toast("QR Code gerado. Escaneie no WhatsApp.");
+      // Render the QR returned by /connect directly (the status poll won't
+      // re-fetch it while connecting, to avoid restarting the socket).
+      const qrcodeContainer = $("#instance-qrcode-container");
+      const qrBox = $("#qrcode-img-box");
+      if (qrcodeContainer && qrBox) {
+        qrcodeContainer.style.display = "flex";
+        const src = result.qrcode.startsWith("data:") ? result.qrcode : `data:image/png;base64,${result.qrcode}`;
+        qrBox.innerHTML = `<img src="${src}" alt="QR Code" style="display: block; width: 220px; height: 220px; margin: 0 auto;">`;
+      }
+      toast("QR Code gerado. Escaneie rápido no WhatsApp.");
     } else {
       toast("Aguardando QR Code do Evolution…");
+      await refreshInstanceStatus();
     }
-    await refreshInstanceStatus();
   } catch (error) {
     toast(error.message, "error");
   } finally {
