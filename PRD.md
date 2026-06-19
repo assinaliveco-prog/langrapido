@@ -154,6 +154,8 @@ LLM. Registrado como P7.
 | P7 | Média | Variância do gpt-4o-mini ainda gera repetição ocasional | modelo/critic | 🟡 mitigado (it.5: guard difflib + recomendar gpt-4o) |
 | P8 | Alta | "Failed to fetch" no painel em redeploys / requests lentos | panel.js | ✅ corrigido (it.7: timeout+retry+msg amigável) |
 | P9 | Média | CRM extraction bloqueava a resposta (latência + timeouts) | agent/conversation | ✅ corrigido (it.7: CRM fire-and-forget) |
+| P10 | **Crítica** | `GET /api/settings` vazava openai_api_key e evolution_key em texto puro no painel público | routes_admin | ✅ corrigido (it.8: mascaramento) |
+| P11 | Alta | Painel sem autenticação (aberto na internet) | server/auth | ⬜ aberto (recomendar PANEL_PASSWORD/login) |
 
 ---
 
@@ -239,6 +241,18 @@ timeout do proxy Vercel. Dois fixes (2 agentes em paralelo):
   (`asyncio.to_thread`), removendo uma chamada LLM do caminho crítico. Memórias
   ainda persistem (verificado: name/email/budget/interest); falhas são logadas, não
   quebram a request. `test_agent.py` corrigido (alvos de mock desatualizados).
+
+### Iteração 8 — 2026-06-18 (segurança: vazamento de credenciais)
+
+**P10 (crítica):** o painel é público (sem auth) e `GET /api/settings` devolvia
+`openai_api_key` e `evolution_key` em texto puro — qualquer um com a URL pegava as
+credenciais. **Fix:** `GET`/`PUT /api/settings` agora mascaram os segredos
+(`sk-…cdef`); `update_settings` ignora valores mascarados/vazios (mantém o real),
+e o uso interno (LLM, WhatsApp) continua lendo a chave real via `get_settings()`.
+Verificado: GET mascara, uso interno usa a real, PUT mascarado mantém, PUT nova troca.
+
+**P11 (aberto):** o painel continua sem login. Recomendação: auth opt-in via
+`PANEL_PASSWORD` (não quebra o acesso atual se não setada). Pendente de decisão.
 
 ## 7. Critérios de "conversível o suficiente" (status atual)
 

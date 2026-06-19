@@ -234,6 +234,14 @@ class Repository:
 
     def update_settings(self, values: dict[str, Any]) -> dict[str, Any]:
         current = self.get_settings()
+        # Secrets are returned to the client masked (containing '…'/'•'). When the
+        # client sends a masked or empty secret back, keep the stored real value
+        # instead of overwriting it with the mask.
+        values = dict(values)
+        for secret in ("openai_api_key", "evolution_key"):
+            incoming = values.get(secret)
+            if incoming is None or incoming == "" or "…" in str(incoming) or "•" in str(incoming):
+                values[secret] = current.get(secret, "")
         validated = AgentSettings.model_validate({**current, **values}).model_dump()
         with self.connect() as connection:
             connection.execute(

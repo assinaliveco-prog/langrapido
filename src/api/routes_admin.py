@@ -18,6 +18,24 @@ from src.api.schemas import (
 
 router = APIRouter(prefix="/api", tags=["admin"])
 
+# Sentinel char used to mask secrets in API responses. update_settings treats any
+# incoming value containing it (or empty) as "unchanged" so the masked value the
+# browser holds is never written back over the real secret.
+MASK_CHAR = "…"
+_SECRET_FIELDS = ("openai_api_key", "evolution_key")
+
+
+def _mask_secret(value: str) -> str:
+    if not value:
+        return ""
+    if len(value) <= 10:
+        return "••••"
+    return f"{value[:3]}{MASK_CHAR}{value[-4:]}"
+
+
+def _mask_settings(settings: dict) -> dict:
+    return {**settings, **{f: _mask_secret(settings.get(f, "")) for f in _SECRET_FIELDS}}
+
 
 @router.get("/dashboard")
 async def dashboard(request: Request):
@@ -36,14 +54,15 @@ async def dashboard(request: Request):
 
 @router.get("/settings", response_model=AgentSettings)
 async def get_settings(request: Request):
-    return request.app.state.services.repository.get_settings()
+    return _mask_settings(request.app.state.services.repository.get_settings())
 
 
 @router.put("/settings", response_model=AgentSettings)
 async def put_settings(settings: AgentSettings, request: Request):
-    return request.app.state.services.repository.update_settings(
+    saved = request.app.state.services.repository.update_settings(
         settings.model_dump()
     )
+    return _mask_settings(saved)
 
 
 @router.get("/contacts")
