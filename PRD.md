@@ -152,6 +152,8 @@ LLM. Registrado como P7.
 | P5 | Baixa | Critic é cego ao histórico (defesa 2ª contra repetição) | critic_node | ✅ corrigido (it.4) |
 | P6 | Alta | Controles de personalidade do painel (formality/concision/emoji/iniciativa) eram placebo | prompt | ✅ corrigido (it.3) |
 | P7 | Média | Variância do gpt-4o-mini ainda gera repetição ocasional | modelo/critic | 🟡 mitigado (it.5: guard difflib + recomendar gpt-4o) |
+| P8 | Alta | "Failed to fetch" no painel em redeploys / requests lentos | panel.js | ✅ corrigido (it.7: timeout+retry+msg amigável) |
+| P9 | Média | CRM extraction bloqueava a resposta (latência + timeouts) | agent/conversation | ✅ corrigido (it.7: CRM fire-and-forget) |
 
 ---
 
@@ -220,6 +222,23 @@ interest: Game Pass | next_action: enviar link
 
 **Nota:** no teste de CRM o mini repetiu o pitch ao receber o e-mail (deveria
 confirmar e avançar) — mesma raiz do P7 (variância do mini); gpt-4o evita.
+
+### Iteração 7 — 2026-06-18 (resiliência "Failed to fetch" + latência)
+
+Diagnóstico do "Failed to fetch": backend 100% OK (todos endpoints 200); o erro é
+rejeição do `fetch()` no navegador — causado por (a) janela de indisponibilidade
+durante os redeploys do Easypanel (~15-30s) e (b) latência alta aproximando o
+timeout do proxy Vercel. Dois fixes (2 agentes em paralelo):
+
+- **P8 — resiliência (`panel.js`):** `api.request` agora tem timeout (25s via
+  AbortController), retry automático de GETs (2× com backoff em erro de rede /
+  502-503-504) e mensagens pt-BR amigáveis no lugar de "Failed to fetch". POST/PUT/
+  DELETE não são repetidos (evita efeito duplicado). Assinatura intacta.
+- **P9 — latência (`agent.py`/`conversation.py`):** o `crm_extractor` saiu do grafo
+  (`sender → END`); a extração de CRM roda fire-and-forget após a resposta
+  (`asyncio.to_thread`), removendo uma chamada LLM do caminho crítico. Memórias
+  ainda persistem (verificado: name/email/budget/interest); falhas são logadas, não
+  quebram a request. `test_agent.py` corrigido (alvos de mock desatualizados).
 
 ## 7. Critérios de "conversível o suficiente" (status atual)
 
