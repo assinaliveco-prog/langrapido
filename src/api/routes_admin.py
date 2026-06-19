@@ -399,6 +399,54 @@ async def connect_instance(request: Request):
         ) from error
 
 
+@router.post("/instances/pair")
+async def pair_instance(payload: dict, request: Request):
+    """Get a WhatsApp pairing code (8 digits) for the number — no QR scan needed."""
+    services = request.app.state.services
+    cfg = services.whatsapp.get_config()
+    if cfg["provider"] != "evolution":
+        raise HTTPException(status_code=400, detail="Disponível apenas para Evolution API")
+    number = "".join(ch for ch in str(payload.get("number", "")) if ch.isdigit())
+    if not number:
+        raise HTTPException(status_code=400, detail="Informe o número com DDI e DDD (ex: 5511999998888)")
+    base = cfg["evolution_url"].rstrip("/")
+    instance = cfg["evolution_instance"]
+    headers = {"apikey": cfg["evolution_key"]}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            # ensure instance exists
+            state = await client.get(
+                f"{base}/instance/connectionState/{instance}", headers=headers
+            )
+            if state.status_code == 404:
+                await client.post(
+                    f"{base}/instance/create",
+                    headers=headers,
+                    json={
+                        "instanceName": instance,
+                        "qrcode": True,
+                        "integration": "WHATSAPP-BAILEYS",
+                    },
+                )
+            # request pairing code for the number
+            res = await client.get(
+                f"{base}/instance/connect/{instance}",
+                headers=headers,
+                params={"number": number},
+            )
+        data = res.json() if res.status_code == 200 else {}
+        code = data.get("pairingCode") or data.get("code")
+        if code:
+            return {"status": "ok", "pairingCode": code}
+        return {
+            "status": "error",
+            "detail": f"Evolution não retornou código (status {res.status_code})",
+            "raw": str(data)[:200],
+        }
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+
+
 @router.post("/instances/logout")
 async def logout_instance(request: Request):
     services = request.app.state.services
