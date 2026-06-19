@@ -420,8 +420,12 @@ async def connect_instance(request: Request):
 
 
 @router.post("/instances/setup-webhook")
-async def setup_webhook(request: Request):
-    """Point the Evolution instance's webhook at this app so inbound messages arrive."""
+async def setup_webhook(payload: dict | None = None, request: Request = None):
+    """Point the Evolution instance's webhook at this app so inbound messages arrive.
+
+    Defaults to the internal Docker hostname (avoids public-URL loopback from the
+    same VPS). Pass {"url": "..."} to override.
+    """
     services = request.app.state.services
     cfg = services.whatsapp.get_config()
     if cfg["provider"] != "evolution":
@@ -429,10 +433,12 @@ async def setup_webhook(request: Request):
     base = cfg["evolution_url"].rstrip("/")
     instance = cfg["evolution_instance"]
     headers = {"apikey": cfg["evolution_key"]}
-    public = (os.getenv("PUBLIC_URL", "") or "").rstrip("/")
-    if not public:
-        raise HTTPException(status_code=400, detail="PUBLIC_URL não configurada")
-    webhook_url = f"{public}/webhook"
+    override = (payload or {}).get("url") if payload else None
+    if override:
+        webhook_url = override.rstrip("/")
+    else:
+        internal = os.getenv("INTERNAL_WEBHOOK_URL", "http://langrapido:8000/webhook")
+        webhook_url = internal
     # Evolution v2 webhook/set payload (nested under "webhook")
     body = {
         "webhook": {
