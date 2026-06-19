@@ -399,6 +399,45 @@ async def connect_instance(request: Request):
         ) from error
 
 
+@router.post("/instances/setup-webhook")
+async def setup_webhook(request: Request):
+    """Point the Evolution instance's webhook at this app so inbound messages arrive."""
+    services = request.app.state.services
+    cfg = services.whatsapp.get_config()
+    if cfg["provider"] != "evolution":
+        raise HTTPException(status_code=400, detail="Disponível apenas para Evolution API")
+    base = cfg["evolution_url"].rstrip("/")
+    instance = cfg["evolution_instance"]
+    headers = {"apikey": cfg["evolution_key"]}
+    public = (os.getenv("PUBLIC_URL", "") or "").rstrip("/")
+    if not public:
+        raise HTTPException(status_code=400, detail="PUBLIC_URL não configurada")
+    webhook_url = f"{public}/webhook"
+    # Evolution v2 webhook/set payload (nested under "webhook")
+    body = {
+        "webhook": {
+            "enabled": True,
+            "url": webhook_url,
+            "events": ["MESSAGES_UPSERT"],
+            "webhookByEvents": False,
+            "base64": False,
+        }
+    }
+    results = {}
+    async with httpx.AsyncClient(timeout=20) as client:
+        try:
+            r = await client.post(f"{base}/webhook/set/{instance}", headers=headers, json=body)
+            results["nested"] = {"http": r.status_code, "body": r.text[:200]}
+            if r.status_code not in (200, 201):
+                # fallback to flat payload (older shape)
+                flat = {"enabled": True, "url": webhook_url, "events": ["MESSAGES_UPSERT"], "webhookByEvents": False}
+                r2 = await client.post(f"{base}/webhook/set/{instance}", headers=headers, json=flat)
+                results["flat"] = {"http": r2.status_code, "body": r2.text[:200]}
+        except Exception as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+    return {"webhook_url": webhook_url, "results": results}
+
+
 @router.post("/instances/pair")
 async def pair_instance(payload: dict, request: Request):
     """Get a WhatsApp pairing code (8 digits) for the number — no QR scan needed."""

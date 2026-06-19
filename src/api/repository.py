@@ -197,7 +197,7 @@ class Repository:
                     json.dumps(defaults["forbidden_terms"], ensure_ascii=False),
                     defaults["business_rules"],
                     defaults["system_prompt"],
-                    defaults["whatsapp_provider"],
+                    os.getenv("WHATSAPP_PROVIDER", defaults["whatsapp_provider"]),
                     defaults["evolution_url"],
                     defaults["evolution_key"],
                     defaults["evolution_instance"],
