@@ -1,14 +1,59 @@
 const api = {
   async request(path, options = {}) {
-    const response = await fetch(path, {
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-      ...options,
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(payload.detail || "Não foi possível concluir a operação");
+    const { timeout = 25000, ...fetchOptions } = options;
+    const method = (fetchOptions.method || "GET").toUpperCase();
+    const isRetryable = method === "GET";
+    const backoffs = [400, 1000];
+    const maxAttempts = isRetryable ? backoffs.length + 1 : 1;
+    const retryableStatuses = new Set([502, 503, 504]);
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      let response;
+
+      try {
+        response = await fetch(path, {
+          headers: { "Content-Type": "application/json", ...(fetchOptions.headers || {}) },
+          ...fetchOptions,
+          signal: controller.signal,
+        });
+      } catch (error) {
+        clearTimeout(timer);
+        // AbortError => timeout; TypeError ("Failed to fetch") => network down.
+        const isTimeout = error && (error.name === "AbortError" || error.code === 20);
+        lastError = new Error(
+          isTimeout
+            ? "Tempo de resposta esgotado. Tente novamente."
+            : "Sem conexão com o servidor. Verifique sua internet ou tente novamente.",
+        );
+        if (isRetryable && attempt < maxAttempts - 1) {
+          await sleep(backoffs[attempt]);
+          continue;
+        }
+        throw lastError;
+      }
+
+      clearTimeout(timer);
+
+      // Retry transient server errors for GET only.
+      if (isRetryable && retryableStatuses.has(response.status) && attempt < maxAttempts - 1) {
+        lastError = new Error("Sem conexão com o servidor. Verifique sua internet ou tente novamente.");
+        await sleep(backoffs[attempt]);
+        continue;
+      }
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.detail || "Não foi possível concluir a operação");
+      }
+      return payload;
     }
-    return payload;
+
+    throw lastError || new Error("Não foi possível concluir a operação");
   },
 };
 
