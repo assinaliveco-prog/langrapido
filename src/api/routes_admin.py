@@ -328,8 +328,17 @@ async def get_instance_status(request: Request):
                         "phone": cfg["evolution_instance"],
                         "id": cfg["evolution_instance"],
                     }
+                elif state == "connecting":
+                    # Already pairing — do NOT call /instance/connect again, it
+                    # restarts the Baileys socket and prevents the pair from
+                    # completing. Just report waiting; the QR was already issued.
+                    return {
+                        "provider": "evolution",
+                        "status": "disconnected",
+                        "connecting": True,
+                    }
                 else:
-                    # Disconnected - fetch QR code
+                    # Truly closed — (re)start the connection to fetch a QR.
                     connect_url = f"{cfg['evolution_url']}/instance/connect/{cfg['evolution_instance']}"
                     async with httpx.AsyncClient(timeout=10) as client:
                         connect_res = await client.get(connect_url, headers=headers)
