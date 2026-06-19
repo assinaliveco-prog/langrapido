@@ -198,6 +198,53 @@ async def upload_file(file: UploadFile = File(...)):
     return {"url": url_path, "filename": file.filename}
 
 
+@router.get("/instances/test-send")
+async def test_send(request: Request):
+    """Try to send a test message via Evolution to the last inbound number; return raw result."""
+    services = request.app.state.services
+    cfg = services.whatsapp.get_config()
+    if cfg["provider"] != "evolution":
+        return {"error": "not evolution"}
+    base = cfg["evolution_url"].rstrip("/")
+    inst = cfg["evolution_instance"]
+    headers = {"apikey": cfg["evolution_key"], "Content-Type": "application/json"}
+    out = {}
+    async with httpx.AsyncClient(timeout=20) as c:
+        # find last inbound message to get a real number
+        number = None
+        try:
+            r = await c.post(f"{base}/chat/findMessages/{inst}", headers=headers, json={"where": {}, "limit": 20})
+            data = r.json()
+            recs = data.get("messages", data)
+            recs = recs.get("records", recs) if isinstance(recs, dict) else recs
+            for m in (recs if isinstance(recs, list) else []):
+                key = m.get("key", {})
+                if not key.get("fromMe"):
+                    jid = key.get("remoteJid", "")
+                    number = jid.split("@")[0]
+                    if number:
+                        break
+        except Exception as e:
+            out["findMessages_error"] = str(e)[:150]
+        out["number"] = number
+        if number:
+            # try several payload shapes
+            for label, payload in [
+                ("flat", {"number": number, "text": "teste"}),
+                ("v1", {"number": number, "textMessage": {"text": "teste"}}),
+                ("options", {"number": number, "text": "teste", "options": {"delay": 100}}),
+            ]:
+                try:
+                    r = await c.post(f"{base}/message/sendText/{inst}", headers=headers, json=payload)
+                    out[label] = {"http": r.status_code, "body": r.text[:160]}
+                    if r.status_code in (200, 201):
+                        out["WORKING_SHAPE"] = label
+                        break
+                except Exception as e:
+                    out[label] = {"error": str(e)[:120]}
+    return out
+
+
 @router.get("/instances/nettest")
 async def nettest(request: Request):
     """Probe which internal hostname reaches the Evolution service (for webhook URL)."""
