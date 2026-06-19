@@ -580,21 +580,25 @@ async def logout_instance(request: Request):
     if cfg["provider"] == "official":
         raise HTTPException(status_code=400, detail="Operação não disponível para canal Oficial")
 
-    url = f"{cfg['evolution_url']}/instance/logout/{cfg['evolution_instance']}"
+    base = cfg["evolution_url"].rstrip("/")
+    instance = cfg["evolution_instance"]
     headers = {"apikey": cfg["evolution_key"]}
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            res = await client.post(url, headers=headers)
-        if res.status_code == 200:
-            return {"status": "ok", "message": "Instância deslogada com sucesso"}
-        else:
-            # Try delete
-            del_url = f"{cfg['evolution_url']}/instance/delete/{cfg['evolution_instance']}"
-            async with httpx.AsyncClient(timeout=10) as client:
-                del_res = await client.delete(del_url, headers=headers)
-            if del_res.status_code == 200:
-                return {"status": "ok", "message": "Instância excluída com sucesso"}
-            raise HTTPException(status_code=res.status_code, detail="Não foi possível deslogar a instância")
+        async with httpx.AsyncClient(timeout=15) as client:
+            # Evolution v2 uses DELETE for logout (POST returns 404).
+            res = await client.delete(f"{base}/instance/logout/{instance}", headers=headers)
+            if res.status_code in (200, 201):
+                return {"status": "ok", "message": "Instância deslogada com sucesso"}
+            # Fallback: delete the instance entirely.
+            del_res = await client.delete(f"{base}/instance/delete/{instance}", headers=headers)
+            if del_res.status_code in (200, 201):
+                return {"status": "ok", "message": "Instância removida com sucesso"}
+            raise HTTPException(
+                status_code=502,
+                detail=f"Não foi possível deslogar (logout {res.status_code}, delete {del_res.status_code})",
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
