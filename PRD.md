@@ -283,8 +283,8 @@ ressalva P7 (recomendado gpt-4o em produção para reduzir a repetição residua
 
 ## 9. Resumo executivo
 
-Avaliação completa em 6 iterações. O agente foi de "repetitivo e robótico" para
-**conversível e personalizável**, com 6 correções entregues e deployadas:
+Avaliação completa em 8 iterações. O agente foi de "repetitivo e robótico" para
+**conversível, personalizável, resiliente e seguro**, com 10 correções deployadas:
 
 | # | Correção | Iteração |
 |---|----------|----------|
@@ -293,17 +293,26 @@ Avaliação completa em 6 iterações. O agente foi de "repetitivo e robótico" 
 | P6 | Controles de personalidade do painel deixaram de ser placebo | it.3 |
 | P5 | Crítico passou a ver o histórico e bloquear repetição | it.4 |
 | P7 | Guard determinístico de similaridade (difflib) no crítico | it.5 |
+| P8 | Resiliência do painel (timeout/retry/erro amigável) | it.7 |
+| P9 | CRM fora do caminho crítico (latência) | it.7 |
+| P10 | Mascaramento de credenciais no `/api/settings` (segurança) | it.8 |
+
+**Validação final (venda completa, gpt-4o):** lead do "oi" ao fechamento — o agente
+respondeu dúvidas, usou o "7 dias grátis" como gancho, contornou "tá caro" (valor +
+trial), não desistiu no "deixa eu pensar", **fechou enviando o link**, sem repetição,
+tom natural; CRM capturou nome/interesse/orçamento. Pronto para converter.
 
 **O que funciona bem:** ver conversas, personalidade (formal/informal/custom),
-objeção, cenários fora de escopo, handoff humano, extração de CRM, fluxos por
-intenção, concisão WhatsApp.
+objeção, fora de escopo (não alucina), handoff humano, extração de CRM, fluxos por
+intenção, concisão WhatsApp, resiliência a falhas de rede, credenciais protegidas.
 
 **Recomendações para produção:**
-1. **Usar `gpt-4o`** (painel → Personalidade → Modelo) — elimina a repetição residual
-   do mini e dá qualidade consistente. O mini fica para custo baixo/testes.
-2. **Configurar o WhatsApp** (Evolution: salvar credenciais + "Conectar instância";
-   ou Cloud API) — hoje `whatsapp_configured=false`.
-3. **Auth do painel** — ainda pendente (adiado a pedido); o painel está aberto.
+1. **Usar `gpt-4o`** (painel → Personalidade → Modelo) — qualidade consistente.
+2. **Configurar o WhatsApp** (Evolution: credenciais + "Conectar instância"; ou
+   Cloud API) — hoje `whatsapp_configured=false`.
+3. **Auth do painel (P11)** — maior pendência de segurança: o painel está aberto na
+   internet. Sugestão: login opt-in via `PANEL_PASSWORD`. Adiado a pedido.
 
 **Pendências conhecidas (não bloqueantes):** P7 residual (mitigado por gpt-4o);
-P3 ambiente de dev local (NVIDIA NIM sobrepõe `.env` — só afeta testes locais).
+P3 ambiente de dev local (NVIDIA NIM sobrepõe `.env` — só afeta testes locais);
+P11 auth (aberto).
