@@ -219,16 +219,17 @@ async def debug_instance(request: Request):
             r2 = await c.get(f"{base}/instance/fetchInstances", headers=headers)
             data = r2.json()
             insts = data if isinstance(data, list) else data.get("instances", data)
-            # keep only our instance, drop noise
+            # list ALL instances with their connection state
             summary = []
             for it in (insts if isinstance(insts, list) else [insts]):
                 node = it.get("instance", it) if isinstance(it, dict) else {}
-                nm = node.get("instanceName") or node.get("name")
-                if nm == inst or not nm:
-                    summary.append({k: node.get(k) for k in ("instanceName", "name", "status", "connectionStatus", "state") if k in node})
-            out["fetchInstances"] = {"http": r2.status_code, "match": summary}
+                summary.append({
+                    "name": node.get("instanceName") or node.get("name"),
+                    "status": node.get("connectionStatus") or node.get("status") or node.get("state"),
+                })
+            out["allInstances"] = {"http": r2.status_code, "list": summary}
         except Exception as e:
-            out["fetchInstances"] = {"error": str(e)[:150]}
+            out["allInstances"] = {"error": str(e)[:150]}
     return out
 
 
