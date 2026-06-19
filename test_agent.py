@@ -1,7 +1,8 @@
 """Integration test for the LangGraph agent pipeline.
 
-Runs the full drafter -> critic -> splitter -> sender -> crm_extractor graph
-with mocked LLM and WhatsApp calls so no real API key is needed.
+Runs the drafter -> critic -> splitter -> sender graph with mocked LLM and
+WhatsApp calls so no real API key is needed. (CRM extraction now runs off the
+graph, fire-and-forget, so it is not part of this pipeline test.)
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ class _FakeEval(BaseModel):
     relevance: int = 9
     concision: int = 9
     coherence: int = 9
-    repetition: int = 0
+    repetition: int = 9
     issues: list[str] = []
     revision_instruction: str = ""
 
@@ -46,43 +47,18 @@ async def test_humanization():
     async def _mock_send(to, text):
         sent.append(text)
 
+    # Drafter calls make_llm(...).invoke(); critic calls
+    # make_llm(...).with_structured_output(...).invoke(). One mock serves both,
+    # patched at the single factory source (src.bot.llm.ChatOpenAI).
+    fake_llm = MagicMock()
+    fake_llm.invoke = MagicMock(return_value=_FakeDraft())
+    fake_llm.with_structured_output = MagicMock(
+        return_value=MagicMock(invoke=MagicMock(return_value=_FakeEval()))
+    )
+
     with (
         patch("src.bot.whatsapp.send_whatsapp_message", new=_mock_send),
-        patch(
-            "src.bot.nodes.drafter.ChatOpenAI",
-            return_value=MagicMock(invoke=MagicMock(return_value=_FakeDraft())),
-        ),
-        patch(
-            "src.bot.nodes.critic.ChatOpenAI",
-            return_value=MagicMock(
-                with_structured_output=MagicMock(
-                    return_value=MagicMock(invoke=MagicMock(return_value=_FakeEval()))
-                )
-            ),
-        ),
-        patch(
-            "src.bot.nodes.crm_extractor.ChatOpenAI",
-            return_value=MagicMock(
-                with_structured_output=MagicMock(
-                    return_value=MagicMock(
-                        invoke=MagicMock(
-                            return_value=MagicMock(
-                                model_dump=MagicMock(
-                                    return_value={
-                                        "name": "",
-                                        "email": "",
-                                        "interest": "",
-                                        "budget": "",
-                                        "next_action": "",
-                                        "urgency": "",
-                                    }
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-        ),
+        patch("src.bot.llm.ChatOpenAI", return_value=fake_llm),
     ):
         result = await graph.ainvoke(
             {

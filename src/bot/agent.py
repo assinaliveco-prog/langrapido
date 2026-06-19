@@ -5,7 +5,6 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from src.bot.nodes.critic import critic_node
-from src.bot.nodes.crm_extractor import crm_extractor_node
 from src.bot.nodes.drafter import drafter_node
 from src.bot.nodes.splitter import splitter_node
 from src.bot.state import AgentState
@@ -50,7 +49,6 @@ def build_graph():
     builder.add_node("critic", critic_node)
     builder.add_node("splitter", splitter_node)
     builder.add_node("sender", sender_node)
-    builder.add_node("crm_extractor", crm_extractor_node)
     builder.set_entry_point("drafter")
     builder.add_edge("drafter", "critic")
     builder.add_conditional_edges(
@@ -59,8 +57,10 @@ def build_graph():
         {"drafter": "drafter", "splitter": "splitter"},
     )
     builder.add_edge("splitter", "sender")
-    builder.add_edge("sender", "crm_extractor")
-    builder.add_edge("crm_extractor", END)
+    # crm_extractor is intentionally OFF the graph's critical path: it makes an
+    # extra LLM call that the user-facing reply does not depend on. It now runs
+    # fire-and-forget from ConversationEngine._handle after the response is ready.
+    builder.add_edge("sender", END)
     return builder.compile(checkpointer=MemorySaver())
 
 

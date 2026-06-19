@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import asdict
 from typing import Any, Protocol
@@ -170,12 +171,82 @@ class ConversationEngine:
                 metadata={"timing": timing},
             )
 
+        # CRM extraction is OFF the critical path: schedule it fire-and-forget
+        # so the reply returns immediately without waiting on its extra LLM call.
+        self._schedule_crm_extraction(
+            conversation_id=conversation_id,
+            contact_id=contact_id,
+            settings=context["settings"],
+        )
+
         return ConversationResult(
             messages=messages,
             draft=draft,
             evaluation=evaluation,
             timings=timings,
         )
+
+    def _schedule_crm_extraction(
+        self,
+        *,
+        conversation_id: int,
+        contact_id: int,
+        settings: dict[str, Any],
+    ) -> None:
+        """Run CRM field extraction asynchronously (fire-and-forget).
+
+        Replaces the former in-graph ``crm_extractor`` node so the user-facing
+        reply is not blocked by the extra LLM call. Any failure is caught and
+        logged so it can never crash the request.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop (e.g. sync test context) — skip background work.
+            return
+        loop.create_task(
+            self._run_crm_extraction(
+                conversation_id=conversation_id,
+                contact_id=contact_id,
+                settings=settings,
+            )
+        )
+
+    async def _run_crm_extraction(
+        self,
+        *,
+        conversation_id: int,
+        contact_id: int,
+        settings: dict[str, Any],
+    ) -> None:
+        from src.bot.nodes.crm_extractor import extract_crm_fields
+
+        try:
+            # Re-read history so the excerpt includes the just-sent assistant
+            # messages, mirroring what the in-graph node used to see.
+            history = [
+                (
+                    HumanMessage(content=message["text"])
+                    if message["role"] == "user"
+                    else AIMessage(content=message["text"])
+                )
+                for message in self.repository.list_messages(conversation_id)
+            ]
+            # extract_crm_fields runs a blocking LLM .invoke + DB writes; keep
+            # it off the event loop thread.
+            await asyncio.to_thread(
+                extract_crm_fields,
+                settings=settings,
+                messages=history,
+                contact_id=contact_id,
+            )
+        except Exception as error:
+            self.repository.add_event(
+                "crm",
+                "warning",
+                "Falha na extração de CRM (background)",
+                {"type": type(error).__name__, "error": str(error)},
+            )
 
     def _extract_explicit_memories(
         self,

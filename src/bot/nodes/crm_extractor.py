@@ -39,10 +39,20 @@ Não invente dados.
 """.strip()
 
 
-def crm_extractor_node(state: AgentState) -> dict[str, Any]:
-    """Extract CRM fields from conversation and persist as memories."""
-    settings = state.get("settings", {})
-    messages = state.get("messages", [])
+def extract_crm_fields(
+    *,
+    settings: dict[str, Any],
+    messages: list[Any],
+    contact_id: int | None,
+) -> dict[str, Any]:
+    """Run the CRM LLM extraction and persist non-empty fields as memories.
+
+    Decoupled from ``AgentState`` so it can be invoked both inside the graph
+    node and from the conversation engine as a fire-and-forget task. ``messages``
+    is a list of LangChain message objects (``.content`` / ``.type``). Returns
+    the extracted CRM field map (empty dict when there is nothing to do or the
+    LLM call fails).
+    """
     if not messages:
         return {}
 
@@ -67,10 +77,9 @@ def crm_extractor_node(state: AgentState) -> dict[str, Any]:
         return {}
 
     # Persist non-empty fields as memories
-    contact_id = state.get("contact_id")
+    field_map = result.model_dump()
     if contact_id:
         repository = get_repository()
-        field_map = result.model_dump()
         for key, value in field_map.items():
             if value:
                 repository.upsert_memory(
@@ -80,5 +89,14 @@ def crm_extractor_node(state: AgentState) -> dict[str, Any]:
                     confidence=0.85,
                 )
 
-    crm = result.model_dump()
-    return {"crm": crm}
+    return field_map
+
+
+def crm_extractor_node(state: AgentState) -> dict[str, Any]:
+    """Extract CRM fields from conversation and persist as memories."""
+    crm = extract_crm_fields(
+        settings=state.get("settings", {}),
+        messages=state.get("messages", []),
+        contact_id=state.get("contact_id"),
+    )
+    return {"crm": crm} if crm else {}
