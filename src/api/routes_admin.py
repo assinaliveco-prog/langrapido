@@ -201,17 +201,19 @@ async def upload_file(file: UploadFile = File(...)):
 @router.get("/instances/nettest")
 async def nettest(request: Request):
     """Probe which internal hostname reaches the Evolution service (for webhook URL)."""
+    # self-reach probes: which internal hostname:port reaches THIS app (langrapido)
     candidates = [
-        "http://jota_sharkbot-evolution:8080",
-        "http://sharkbot-evolution:8080",
-        "http://jota-sharkbot-evolution:8080",
-        "http://jota_sharkbot_evolution:8080",
+        "http://langrapido:8000/api/health",
+        "http://jota_langrapido:8000/api/health",
+        "http://jota-langrapido:8000/api/health",
+        "http://langrapido:80/api/health",
+        "http://langrapido:3000/api/health",
     ]
     results = {}
     for host in candidates:
         try:
             async with httpx.AsyncClient(timeout=6) as c:
-                r = await c.get(host + "/")
+                r = await c.get(host)
             results[host] = r.status_code
         except Exception as e:
             results[host] = type(e).__name__ + ": " + str(e)[:40]
