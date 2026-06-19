@@ -238,20 +238,23 @@ async def debug_instance(request: Request):
         except Exception as e:
             out["connectionState"] = {"error": str(e)[:150]}
         try:
-            r2 = await c.get(f"{base}/instance/fetchInstances", headers=headers)
-            data = r2.json()
-            insts = data if isinstance(data, list) else data.get("instances", data)
-            # list ALL instances with their connection state
-            summary = []
-            for it in (insts if isinstance(insts, list) else [insts]):
-                node = it.get("instance", it) if isinstance(it, dict) else {}
-                summary.append({
-                    "name": node.get("instanceName") or node.get("name"),
-                    "status": node.get("connectionStatus") or node.get("status") or node.get("state"),
-                })
-            out["allInstances"] = {"http": r2.status_code, "list": summary}
+            r3 = await c.post(
+                f"{base}/chat/findMessages/{inst}",
+                headers={**headers, "Content-Type": "application/json"},
+                json={"where": {}, "limit": 5},
+            )
+            data = r3.json()
+            msgs = data.get("messages", data) if isinstance(data, dict) else data
+            records = msgs.get("records", msgs) if isinstance(msgs, dict) else msgs
+            count = len(records) if isinstance(records, list) else "?"
+            out["messagesInEvolution"] = {"http": r3.status_code, "count": count}
         except Exception as e:
-            out["allInstances"] = {"error": str(e)[:150]}
+            out["messagesInEvolution"] = {"error": str(e)[:150]}
+        try:
+            r4 = await c.get(f"{base}/webhook/find/{inst}", headers=headers)
+            out["webhookConfig"] = {"http": r4.status_code, "body": r4.text[:200]}
+        except Exception as e:
+            out["webhookConfig"] = {"error": str(e)[:150]}
     return out
 
 
