@@ -236,10 +236,10 @@ async def get_instance_status(request: Request):
                 create_url = f"{cfg['evolution_url']}/instance/create"
                 create_payload = {
                     "instanceName": cfg["evolution_instance"],
-                    "token": "",
-                    "qrcode": True
+                    "qrcode": True,
+                    "integration": "WHATSAPP-BAILEYS",
                 }
-                async with httpx.AsyncClient(timeout=10) as client:
+                async with httpx.AsyncClient(timeout=20) as client:
                     create_res = await client.post(create_url, headers=headers, json=create_payload)
                 if create_res.status_code == 201 or create_res.status_code == 200:
                     qr_data = create_res.json()
@@ -325,7 +325,11 @@ async def connect_instance(request: Request):
                 create_res = await client.post(
                     f"{base}/instance/create",
                     headers=headers,
-                    json={"instanceName": instance, "token": "", "qrcode": True},
+                    json={
+                        "instanceName": instance,
+                        "qrcode": True,
+                        "integration": "WHATSAPP-BAILEYS",
+                    },
                 )
                 if create_res.status_code not in (200, 201):
                     raise HTTPException(
