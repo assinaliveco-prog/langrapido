@@ -270,8 +270,8 @@
       </section>
 
       <section class="view" data-view="instances" hidden>
-        <div class="settings-layout">
-          <div class="settings-main">
+        <div style="max-width: 760px; display: flex; flex-direction: column; gap: 20px;">
+          <div>
             <form id="instances-settings-form">
               <article class="form-section">
                 <header><span class="section-index">01</span><div><h2>Configuração de Conexão</h2><p>Escolha como conectar o bot ao WhatsApp.</p></div></header>
@@ -308,24 +308,22 @@
             </form>
           </div>
 
-          <aside class="settings-aside">
-            <div class="sticky-card" style="padding: 25px; background: var(--surface-1); border: 1px solid var(--line-soft); border-radius: var(--radius-md);">
-              <span class="aside-label">STATUS DA INSTÂNCIA</span>
-              <div id="instance-status-info" style="margin-top: 15px;">
-                <div class="loading-state">Consultando status da instância…</div>
-              </div>
-              <button id="btn-connect-instance" type="button" class="button button-primary button-block" style="margin-top: 16px; display: none;">
-                Conectar instância
-              </button>
-              <div id="instance-qrcode-container" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--line);">
-                <span style="font-size: 11px; font-family: var(--font-mono); color: var(--warning); text-align: center;">Escaneie o QR Code no seu WhatsApp:</span>
-                <div id="qrcode-img-box" style="padding: 10px; background: #fff; border-radius: 8px; display: inline-block;">
-                  <!-- QR Code image injected dynamically -->
-                </div>
-                <small style="color: var(--faint); font-size: 9px; text-align: center;">O QR Code é atualizado automaticamente.</small>
-              </div>
+          <article class="form-section" id="instance-status-card">
+            <header><span class="section-index">02</span><div><h2>Status &amp; QR Code</h2><p>Salve a conexão Evolution acima e clique em <strong>Gerar QR Code</strong> para conectar seu WhatsApp.</p></div></header>
+            <div id="instance-status-info" style="margin-top: 4px;">
+              <div class="loading-state">Consultando status da instância…</div>
             </div>
-          </aside>
+            <button id="btn-connect-instance" type="button" class="button button-primary" style="margin-top: 16px; width: fit-content; display: none;">
+              Conectar / Gerar QR Code
+            </button>
+            <div id="instance-qrcode-container" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--line);">
+              <span style="font-size: 12px; font-family: var(--font-mono); color: var(--warning); text-align: center;">Escaneie o QR Code no WhatsApp (Aparelhos conectados):</span>
+              <div id="qrcode-img-box" style="padding: 12px; background: #fff; border-radius: 8px; display: inline-block;">
+                <!-- QR Code image injected dynamically -->
+              </div>
+              <small style="color: var(--faint); font-size: 10px; text-align: center;">O QR Code é atualizado automaticamente a cada poucos segundos.</small>
+            </div>
+          </article>
         </div>
       </section>
 

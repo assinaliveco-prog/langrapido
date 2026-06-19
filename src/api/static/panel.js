@@ -1105,6 +1105,9 @@ function toggleProviderFields(provider) {
       evolutionDiv.style.display = "flex";
     }
   }
+  // Connect/QR button is only relevant for Evolution.
+  const connectBtn = $("#btn-connect-instance");
+  if (connectBtn) connectBtn.style.display = provider === "evolution" ? "inline-flex" : "none";
 }
 
 async function refreshInstanceStatus() {
@@ -1118,9 +1121,12 @@ async function refreshInstanceStatus() {
 
     const connectBtn = $("#btn-connect-instance");
     if (connectBtn) {
-      const showConnect =
-        statusData.provider === "evolution" && statusData.status !== "connected";
-      connectBtn.style.display = showConnect ? "block" : "none";
+      // Show whenever the Evolution provider is selected (radio) and not yet
+      // connected — works before and after the credentials are saved.
+      const radioEvo =
+        document.querySelector('input[name="whatsapp_provider"]:checked')?.value === "evolution";
+      const showConnect = radioEvo && statusData.status !== "connected";
+      connectBtn.style.display = showConnect ? "inline-flex" : "none";
     }
 
     if (statusData.status === "connected") {
@@ -1274,6 +1280,10 @@ async function saveInstances(event) {
     state.settings = saved;
     toast("Configurações de conexão salvas com sucesso!");
     await refreshInstanceStatus();
+    // For Evolution, immediately generate the QR so the user doesn't hunt for it.
+    if (provider === "evolution") {
+      await connectInstance();
+    }
   } catch (error) {
     toast(error.message, "error");
   } finally {
