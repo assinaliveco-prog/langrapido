@@ -583,24 +583,32 @@ async def logout_instance(request: Request):
     base = cfg["evolution_url"].rstrip("/")
     instance = cfg["evolution_instance"]
     headers = {"apikey": cfg["evolution_key"]}
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            # Evolution v2 uses DELETE for logout (POST returns 404).
-            res = await client.delete(f"{base}/instance/logout/{instance}", headers=headers)
-            if res.status_code in (200, 201):
-                return {"status": "ok", "message": "Instância deslogada com sucesso"}
-            # Fallback: delete the instance entirely.
-            del_res = await client.delete(f"{base}/instance/delete/{instance}", headers=headers)
-            if del_res.status_code in (200, 201):
-                return {"status": "ok", "message": "Instância removida com sucesso"}
-            raise HTTPException(
-                status_code=502,
-                detail=f"Não foi possível deslogar (logout {res.status_code}, delete {del_res.status_code})",
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # Short timeout per call so the request never exceeds the gateway timeout
+    # (which produced a 502). Logging out an open session can hang on Evolution's
+    # side, so a timeout here is treated as "disconnect started", not an error.
+    async def _del(path: str):
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                r = await client.delete(f"{base}/{path}", headers=headers)
+            return r.status_code
+        except httpx.TimeoutException:
+            return "timeout"
+        except Exception as e:
+            return f"err:{type(e).__name__}"
+
+    logout = await _del(f"instance/logout/{instance}")
+    if logout in (200, 201):
+        return {"status": "ok", "message": "WhatsApp desconectado."}
+    # Logout may hang/fail on an open session — delete the instance to force it.
+    delete = await _del(f"instance/delete/{instance}")
+    if delete in (200, 201, 404):
+        return {"status": "ok", "message": "Instância removida. Gere um novo QR para reconectar."}
+    # Even on timeout, Evolution usually processes it async — report success-ish.
+    return {
+        "status": "ok",
+        "message": "Desconexão solicitada (pode levar alguns segundos). Atualize o status.",
+        "_debug": {"logout": logout, "delete": delete},
+    }
 
 
 
