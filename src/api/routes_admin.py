@@ -590,7 +590,7 @@ async def logout_instance(request: Request):
         try:
             async with httpx.AsyncClient(timeout=8) as client:
                 r = await client.delete(f"{base}/{path}", headers=headers)
-            return r.status_code
+            return r.status_code if r.status_code in (200, 201, 404) else f"{r.status_code}:{r.text[:90]}"
         except httpx.TimeoutException:
             return "timeout"
         except Exception as e:
