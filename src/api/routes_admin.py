@@ -198,6 +198,26 @@ async def upload_file(file: UploadFile = File(...)):
     return {"url": url_path, "filename": file.filename}
 
 
+@router.get("/instances/nettest")
+async def nettest(request: Request):
+    """Probe which internal hostname reaches the Evolution service (for webhook URL)."""
+    candidates = [
+        "http://jota_sharkbot-evolution:8080",
+        "http://sharkbot-evolution:8080",
+        "http://jota-sharkbot-evolution:8080",
+        "http://jota_sharkbot_evolution:8080",
+    ]
+    results = {}
+    for host in candidates:
+        try:
+            async with httpx.AsyncClient(timeout=6) as c:
+                r = await c.get(host + "/")
+            results[host] = r.status_code
+        except Exception as e:
+            results[host] = type(e).__name__ + ": " + str(e)[:40]
+    return results
+
+
 @router.get("/instances/debug")
 async def debug_instance(request: Request):
     """Raw Evolution diagnostics — connection state + instance details."""
